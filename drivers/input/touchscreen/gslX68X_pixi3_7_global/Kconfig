@@ -1,0 +1,20 @@
+#config GSL_TOUCHPANEL_DRIVER
+#        tristate "GSL GSL touchpanel driver"
+#        depends on TOUCHSCREEN_GSL
+#        default n
+
+# config GSL_TOUCHPANEL_DRIVER
+#	tristate "GSL GSL touchpanel driver"
+#	depends on I2C
+#	default n
+#	help
+#	  This enables support for functions for GSL
+#	  touchscreens.
+
+#	  Say Y here if you have a GSL touchscreen connected
+#	  to your system.
+
+#	  If unsure, say N.
+
+#	  To compile this driver as a module, choose M here: the
+#	  module will be called gsl_point_id.

@@ -1,0 +1,10 @@
+config SENSORS_STK3X1X_TCT
+	tristate "STK3311 device driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here you want to enable for the sitronix stk3x1x
+	  light and proximity sensors driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called stk3x1x.

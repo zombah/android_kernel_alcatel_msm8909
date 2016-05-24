@@ -1,0 +1,13 @@
+#bma2x2 driver
+obj-y += bstclass.o
+
+obj-$(CONFIG_SENSORS_BMA2X2_TCT)	+= bma2x2.o
+
+ifeq ($(CONFIG_SENSORS_BMA2X2_ENABLE_INT1_TCT),y)
+	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT1
+endif
+
+ifeq ($(CONFIG_SENSORS_BMA2X2_ENABLE_INT2_TCT),y)
+	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT2
+endif
+

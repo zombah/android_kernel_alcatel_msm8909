@@ -1,0 +1,14 @@
+#
+# Synaptics DSX touchscreen driver configuration
+#
+
+#[PLATFORM]-Add-BEGIN by mike.li for s2333 driver code.[2015.05.21]
+config TOUCHSCREEN_SYNAPTICS_DSX_PIXI355            
+	bool "Synaptics DSX touchscreen"
+	default n
+	help
+	  Say Y here if you have a Synaptics DSX touchscreen connected
+	  to your system.
+
+	  If unsure, say N.
+#[PLATFORM]-Add-END by mike.li

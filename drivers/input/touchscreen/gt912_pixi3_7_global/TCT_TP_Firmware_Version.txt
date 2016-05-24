@@ -1,0 +1,2 @@
+PROJECT=PIXI37
+TP_IC:GT912,FW version=0x1040,CFG version=v68

@@ -1,0 +1,104 @@
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 and
+* only version 2 as published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
+
+/dts-v1/;
+
+#include "msm8909-mtp.dtsi"
+
+#include "msm8909-camera-sensor-mtp.dtsi"
+#include "msm8909-pm8909.dtsi"
+#include "msm8909-pm8909-mtp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. MSM8909-PM8909 SMB1360 1GB MTP";
+	compatible = "qcom,msm8909-mtp", "qcom,msm8909", "qcom,mtp";
+	qcom,board-id= <8 0x3>;
+};
+
+&i2c_4 {
+	smb1360_otg_supply: smb1360-chg-fg@14 {
+		compatible = "qcom,smb1360-chg-fg";
+		reg = <0x14>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <58 8>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&smb_int_default>;
+
+                /* battery-profile selection properties */
+		qcom,batt-profile-select;
+		qcom,smb1360-vadc = <&pm8909_vadc>;
+		qcom,batt-id-vref-uv = <1800000>;
+		qcom,batt-id-rpullup-kohm = <100>;
+		qcom,profile-a-rid-kohm = <200>;
+		qcom,profile-b-rid-kohm = <21>;
+
+		//qcom,charging-disabled;
+		qcom,empty-soc-disabled;
+		qcom,chg-inhibit-disabled;
+		qcom,float-voltage-mv = <4350>;
+		qcom,fg-cc-to-cv-mv = <4328>;
+		qcom,thermistor-c1-coeff = <0x86DA>;
+		qcom,iterm-ma = <75>;
+		qcom,charging-timeout = <0>;
+		qcom,recharge-thresh-mv = <100>;
+		qcom,thermal-mitigation = <1500 850 650 550>;
+		regulator-name = "smb1360_otg_vreg";
+		qcom,otg-batt-curr-limit = <1500>;
+		qcom,shdn-after-pwroff;
+
+		//qcom,stat-pulsed-irq;
+		qcom,fg-reset-thresold-mv = <200>;
+		qcom,fg-delta-soc = <1>;
+		/*fg configure*/
+		qcom,fg-batt-capacity-mah = <2000>;
+		qcom,fg-cc-soc-coeff = <0x8819>;
+		qcom,fg-cutoff-voltage-mv = <3400>;// add soc 0% voltage 3.4v
+		qcom,fg-iterm-ma = <150>;
+		qcom,fg-ibatt-standby-ma = <200>;
+		qcom,fg-auto-recharge-soc = <99>;
+		qcom,fg-soc-max = <85>;
+		qcom,fg-soc-min = <15>;
+		qcom,fg-reset-at-pon;
+
+		/*temp configure*/
+		qcom,config-hard-thresholds;
+		qcom,hot-bat-decidegc = <550>;
+		qcom,cold-bat-decidegc = <0>;
+		qcom,soft-jeita-supported;
+		qcom,warm-bat-decidegc = <450>;
+		qcom,cool-bat-decidegc = <100>;
+		qcom,warm-bat-mv = <4100>;
+		qcom,cool-bat-mv = <4350>;
+		qcom,warm-bat-ma = <650>;
+		qcom,cool-bat-ma = <550>;
+	};
+};
+
+&pm8909_chg {
+	status = "ok";
+	qcom,use-external-charger;
+};
+
+&pm8909_bms {
+	status = "ok";
+	qcom,disable-bms;
+};
+
+&usb_otg {
+
+	qcom,hsusb-otg-mode = <3>; // 1 - Peripheral only mode;2 - Host only mode;3 - OTG mode
+	qcom,usbid-gpio = <&msm_gpio 65 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&usbid_default>;
+
+	vbus_otg-supply = <&smb1360_otg_supply>;
+};

@@ -1,0 +1,10 @@
+config SENSORS_KXTJ9_TCT
+	tristate "KXTJ9 device driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here you want to enable for the sitronix KXTJ9
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called KXTJ9.

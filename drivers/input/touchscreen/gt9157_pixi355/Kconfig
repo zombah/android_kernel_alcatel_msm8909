@@ -1,0 +1,11 @@
+#[PLATFORM]-Add-BEGIN by Luoxingxing for gt9157 driver code.[2015.04.16]
+config TOUCHSCREEN_GT9157            
+       tristate "GT9157 touchscreen"
+	default n
+       depends on I2C
+       help
+         Say Y here if you have a GT9157 touchscreen on TCL PIXI3-55.
+         If unsure, say N.
+         To compile this driver as a module, choose M here: the
+         module will be called GT9157.
+#[PLATFORM]-Add-END by Luoxingxing
