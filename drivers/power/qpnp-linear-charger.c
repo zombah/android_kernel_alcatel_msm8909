@@ -488,11 +488,6 @@ struct qpnp_lbc_chip {
 	struct qpnp_adc_tm_btm_param	adc_param;
 	struct qpnp_vadc_chip		*vadc_dev;
 	struct qpnp_adc_tm_chip		*adc_tm_dev;
-/* [PLATFORM]-Mod-BEGIN by TCTNB.YQJ, PR-878278, 2015/01/16, improve the bat-temprt report frequency */
-#ifdef CONFIG_TCT_8909_POP3
-	struct delayed_work			power_supply_change_work;
-#endif
-/* [PLATFORM]-Mod-END by TCTNB.YQJ */
 /* [PLATFORM]-Add-BEGIN by TCTNB.FLF, CR-1007809, 2015/06/02, add power off condition */
 #ifdef CONFIG_TCT_8909_COMMON
 	struct delayed_work			low_voltage_detect_work;
@@ -3844,30 +3839,6 @@ static void low_voltage_detect_work_fn(struct work_struct *work)
 }
 #endif
 /* [PLATFORM]-Add-END by TCTNB.FLF */
-/* [PLATFORM]-Mod-BEGIN by TCTNB.YQJ, PR-878278, 2015/01/16, improve the bat-temprt report frequency */
-#ifdef CONFIG_TCT_8909_POP3
-#define POEWR_SUPPLY_CHANGE_PERIOD_MS	5000
-static void power_supply_change_work(struct work_struct *work)
-{
-	struct qpnp_lbc_chip *chip = container_of(work,
-				struct qpnp_lbc_chip, power_supply_change_work.work);
-	static int temp_pre = DEFAULT_TEMP;
-	int temp_now = get_prop_batt_temp(chip);
-	int voltage_now = get_prop_battery_voltage_now(chip);
-
-	pr_debug("temp_pre = %d, temp_now = %d, voltage_now = %d\n",
-				temp_pre, temp_now, voltage_now);
-
-	if ((abs(temp_now - temp_pre) >= 10) || (voltage_now < 3200000)) {
-		temp_pre = temp_now;
-		power_supply_changed(&chip->batt_psy);
-	}
-
-	schedule_delayed_work(&chip->power_supply_change_work,
-			msecs_to_jiffies(POEWR_SUPPLY_CHANGE_PERIOD_MS));
-}
-#endif
-/* [PLATFORM]-Add-END by TCTNB.YQJ */
 
 #ifdef CONFIG_TCT_BATT_ID_SUPPORT
 #define BATT_ID_DETECT_PERIOD_MS	5000
@@ -4358,13 +4329,6 @@ static int qpnp_lbc_main_probe(struct spmi_device *spmi)
 		alarm_start_relative(&chip->vddtrim_alarm, kt);
 	}
 
-/* [PLATFORM]-Mod-BEGIN by TCTNB.YQJ, PR-878278, 2015/01/16, improve the bat-temprt report frequency */
-#ifdef CONFIG_TCT_8909_POP3
-	schedule_delayed_work(&chip->power_supply_change_work,
-			msecs_to_jiffies(POEWR_SUPPLY_CHANGE_PERIOD_MS));
-#endif
-/* [PLATFORM]-Add-END by TCTNB.YQJ */
-
 	chip->debug_root = debugfs_create_dir("qpnp_lbc", NULL);
 	if (!chip->debug_root)
 		pr_err("Couldn't create debug dir\n");
@@ -4482,11 +4446,6 @@ static int qpnp_lbc_remove(struct spmi_device *spmi)
 #endif
 /* [PLATFORM]-Mod-END by TCTNB.FLF */
 
-/* [PLATFORM]-Mod-BEGIN by TCTNB.YQJ, PR-878278, 2015/01/16, improve the bat-temprt report frequency */
-#ifdef CONFIG_TCT_8909_POP3
-	cancel_delayed_work(&chip->power_supply_change_work);
-#endif
-/* [PLATFORM]-Mod-END by TCTNB.YQJ */
 /* [PLATFORM]-Add-BEGIN by TCTNB.FLF, CR-1007809, 2015/06/02, add power off condition */
 #ifdef CONFIG_TCT_8909_COMMON
 	cancel_delayed_work(&chip->low_voltage_detect_work);
