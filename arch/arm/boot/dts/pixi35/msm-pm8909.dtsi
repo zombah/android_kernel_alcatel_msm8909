@@ -31,15 +31,20 @@
 			interrupt-names = "kpdpwr", "resin";
 			qcom,pon-dbc-delay = <15625>;
 			qcom,system-reset;
-			qcom,clear-warm-reset;
-
+//modify begin by TCTSH Stephen.wu PR.998186 for long press power key from shutdown to reset
+//			qcom,clear-warm-reset;
+/*JRD SYS START, for modify long press power key from reset to shutdown*/
+	              qcom,s3-debounce = <8>;
+                     qcom,s3-src = "kpdpwr";/* set s3 reset source */
 			qcom,pon_1 {
 				qcom,pon-type = <0>;
-				qcom,support-reset = <1>;
+				qcom,support-reset = <0>;
 				qcom,pull-up = <1>;
 				qcom,s1-timer = <10256>;
 				qcom,s2-timer = <2000>;
-				qcom,s2-type = <1>;
+				qcom,s2-type = <7>;
+/*JRD SYS END, for modify long press power key from reset to shutdown*/
+//modify end by TCTSH Stephen.wu for long press power key from shutdown to reset
 				linux,code = <116>;
 			};
 
@@ -201,20 +206,23 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			qcom,vddmax-mv = <4200>;
-			qcom,vddsafe-mv = <4200>;
+			qcom,vddmax-mv = <4350>;
+			qcom,vddsafe-mv = <4350>;
 			qcom,vinmin-mv = <4308>;
 			qcom,ibatsafe-ma = <1440>;
 			qcom,thermal-mitigation = <1440 720 630 0>;
+			qcom,cold-bat-decidegc = <0>;
 			qcom,cool-bat-decidegc = <100>;
+			qcom,over-37-bat-decidegc = <370>;
+			qcom,over-42-bat-decidegc = <420>;
 			qcom,warm-bat-decidegc = <450>;
-			qcom,cool-bat-mv = <4100>;
+			qcom,overheat-bat-decidegc = <550>;
+			qcom,cool-bat-mv = <4350>;
 			qcom,warm-bat-mv = <4100>;
-			qcom,ibatmax-warm-ma = <360>;
-			qcom,ibatmax-cool-ma = <360>;
+			qcom,ibatmax-warm-ma = <550>;
+			qcom,ibatmax-cool-ma = <550>;
 			qcom,batt-hot-percentage = <25>;
 			qcom,batt-cold-percentage = <80>;
-			qcom,tchg-mins = <232>;
 			qcom,chg-vadc = <&pm8909_vadc>;
 			qcom,chg-adc_tm = <&pm8909_adc_tm>;
 
@@ -273,8 +281,8 @@
 			status = "disabled";
 
 			qcom,v-cutoff-uv = <3400000>;
-			qcom,max-voltage-uv = <4200000>;
-			qcom,r-conn-mohm = <0>;
+			qcom,max-voltage-uv = <4350000>;
+			qcom,r-conn-mohm = <5>;
 			qcom,shutdown-soc-valid-limit = <100>;
 			qcom,low-soc-calculate-soc-threshold = <15>;
 			qcom,low-voltage-calculate-soc-ms = <1000>;
@@ -315,6 +323,11 @@
 						  "fsm_state_change";
 			};
 		};
+
+		tct,chgr@1008 {
+			compatible = "tct,usb-get-spmi";
+			reg = <0x1008 0x1>;
+		};		
 	};
 
 	qcom,pm8909@1 {
@@ -530,6 +543,11 @@
 			qcom,cdc-vdd-mic-bias-voltage = <3075000 3075000>;
 			qcom,cdc-vdd-mic-bias-current = <5000>;
 
+			cdc-vdd-spkdrv-supply = <&spk_vreg>;
+			qcom,cdc-vdd-spkdrv-voltage = <5000000 5000000>;
+			qcom,cdc-vdd-spkdrv-current = <20000>;
+
+
 			qcom,cdc-mclk-clk-rate = <9600000>;
 
 			qcom,cdc-static-supplies = "cdc-vdda-h",
@@ -537,7 +555,8 @@
 						   "cdc-vdd-pa",
 						   "cdc-vdda-cp";
 
-			qcom,cdc-on-demand-supplies = "cdc-vdd-mic-bias";
+			qcom,cdc-on-demand-supplies = "cdc-vdd-mic-bias",
+						      "cdc-vdd-spkdrv";
 		};
 
 		pm8909_conga_analog: 8909_wcd_codec@f100 {
@@ -564,6 +583,7 @@
 			reg-names = "qpnp-lpg-channel-base";
 			qcom,channel-id = <0>;
 			qcom,supported-sizes = <6>, <9>;
+
 			#pwm-cells = <2>;
 		};
 	};

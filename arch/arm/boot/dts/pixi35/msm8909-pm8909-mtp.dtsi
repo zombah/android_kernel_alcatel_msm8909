@@ -19,8 +19,11 @@
 &pm8909_bms {
 	status = "ok";
 	qcom,battery-data = <&mtp_batterydata>;
+
 	qcom,batt-aging-comp;
 };
+
+
 
 &spmi_bus {
 	qcom,pm8909@0 {
@@ -32,7 +35,7 @@
 				linux,default-trigger = "none";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
-				qcom,current-setting = <5>;
+				qcom,current-setting = <40>; //20
 				qcom,id = <6>;
 				qcom,mode = "manual";
 				qcom,source-sel = <1>;
@@ -106,6 +109,7 @@
 	qcom,msm-micbias2-ext-cap;
 };
 
+
 &spk_vreg {
 	status = "okay";
 };
@@ -125,3 +129,4 @@
 &smb1357_otg_vreg {
 	usb-pullup-supply = <&pm8909_l13>;
 };
+

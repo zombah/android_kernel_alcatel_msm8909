@@ -129,5 +129,9 @@
 	};
 };
 
+/* add begin by BSP,Add LCD driver for pixi35 */
+#include "dsi-panel-hx8379c-tdt-fwvga-video.dtsi"
+#include "dsi-panel-ili9806e-byd-fwvga-video.dtsi"
+/* add end by BSP,Add LCD driver for pixi35 */
 #include "dsi-panel-sim-video.dtsi"
 #include "dsi-panel-sim-cmd.dtsi"

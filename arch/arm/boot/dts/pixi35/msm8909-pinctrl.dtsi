@@ -193,7 +193,7 @@
 		};
 
 		vdd_spkdrv {
-			qcom,pins = <&gp 4>;
+			/* qcom,pins = <&gp 4>; xyzhang1 this pin for uart,can not be shared */
 			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <0>;
 			label = "vdd_spkdrv";
@@ -593,14 +593,14 @@
 			};
 		};
 
-		tpiu_seta_15 {
+		usb-id-pin {
 			qcom,pins = <&gp 65>;
 			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <3>;
-			label = "tpiu-seta-15";
-			seta_15: seta {
-				drive-strength = <16>;
-				bias-disable;
+			qcom,pin-func = <0>;
+			label = "usb-id-pin";
+			usbid_default: default {
+				drive-strength = <8>;
+				bias-pull-up;
 			};
 		};
 
@@ -850,6 +850,7 @@
 			};
 		};
 
+
 		cti_trigout_a0 {
 			qcom,pins = <&gp 23>;
 			qcom,num-grp-pins = <1>;
@@ -1065,6 +1066,7 @@
 
                         i2c_5_sleep: i2c_5_sleep {
                                 drive-strength = <2>; /* 2 MA */
+
                                 bias-pull-down; /* PULL DOWN */
                         };
                 };
@@ -1083,6 +1085,7 @@
 
 			i2c_3_sleep: i2c_3_sleep {
 				drive-strength = <2>; /* 2 MA */
+
 				bias-pull-down; /* PULL DOWN */
 			};
 		};
@@ -1276,5 +1279,41 @@
 				bias-pull-up;		/* PULL UP*/
 			};
 		};
+
+		tsl2772x_int_pin { /* [BUFFIX]-Add- by TCTNB.XQJ,PR-886227, 2015/2/2, init int gpio*/
+                       qcom,pins = <&gp 94>;
+                       qcom,pin-func = <0>;
+                       qcom,num-grp-pins = <1>;
+                       label = "tsl2772x-irq";
+                       tsl2772x_default: tsl2772x_default {
+                               drive-strength = <6>;
+                               bias-pull-up;
+                       };
+                       tsl2772x_sleep: tsl2772x_sleep {
+                               drive-strength = <2>;
+                               bias-pull-down;
+                       };
+               };
+
+ /* [PLATFORM]-Add-BEGIN by TCTNB.ZXZ, FR-876759, 2015/01/06, config unused gpios for pop3 */
+                 unused_gpio_config{
+                         qcom,pins = <&gp 2>,<&gp 10>,<&gp 16>,<&gp 36>, <&gp 70>,<&gp 71>, <&gp 75>,
+					<&gp 81>,<&gp 83>,<&gp 88>,<&gp 92>,<&gp 93>;
+                         qcom,num-grp-pins = <12>;
+                         qcom,pin-func = <0>;
+                         label = "unused_gpio_config";
+                         /* active state */
+                         unused_gpio_default: default {
+                                 drive-strength = <2>; /* 2 MA */
+                                 bias-pull-down;
+                         };
+                         /*suspended state */
+                         unused_gpio_sleep: sleep {
+                                 drive-strength = <2>; /* 2 MA */
+                                 bias-pull-down;
+                         };
+                 };
+ /* [PLATFORM]-Add-BEGIN by TCTNB.ZXZ */
+
 	};
 };

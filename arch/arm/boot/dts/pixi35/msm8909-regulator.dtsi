@@ -181,6 +181,7 @@
 			status = "okay";
 		pm8909_l9: regulator-l9 {
 			status = "okay";
+
 			regulator-min-microvolt = <3000000>;
 			regulator-max-microvolt = <3300000>;
 			qcom,init-voltage = <3000000>;
@@ -275,6 +276,7 @@
 		regulator-name = "spk_vreg";
 		startup-delay-us = <0>;
 		enable-active-high;
+
 		gpio = <&msm_gpio 4 0>;
 	};
 };
