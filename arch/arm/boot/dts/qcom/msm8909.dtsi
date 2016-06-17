@@ -108,6 +108,7 @@
 
 		venus_qseecom_mem: venus_qseecom_region@0 {
 			linux,reserve-contiguous-region;
+			linux,reserve-region;
 			linux,memory-limit = <0x90000000>;
 			reg = <0 0 0 0x600000>;
 			label = "venus_qseecom_mem";
@@ -313,7 +314,7 @@
 	};
 
 	qcom,cpu-bwmon {
-		compatible = "qcom,bimc-bwmon2";
+		compatible = "qcom,bimc-bwmon";
 		reg = <0x408000 0x300>, <0x401000 0x200>;
 		reg-names = "base", "global_base";
 		interrupts = <0 183 4>;

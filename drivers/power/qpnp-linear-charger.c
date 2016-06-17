@@ -1524,9 +1524,19 @@ static void qpnp_batt_external_power_changed(struct power_supply *psy)
 		/* Disable charger in case of reset or suspend event */
 		if (current_ma <= 2 && !chip->cfg_use_fake_battery
 				&& get_prop_batt_present(chip)) {
+	            if(current_ma == 2)
+                        {
+                        printk("usb suspend current\n");
+			qpnp_lbc_charger_enable(chip, CURRENT, 1);
+			chip->usb_psy_ma = 500;
+			qpnp_lbc_set_appropriate_current(chip);
+			}
+		    else
+			{
 			qpnp_lbc_charger_enable(chip, CURRENT, 0);
 			chip->usb_psy_ma = QPNP_CHG_I_MAX_MIN_90;
 			qpnp_lbc_set_appropriate_current(chip);
+			}
 		}
 	#if defined(FEATURE_TCTNB_MMITEST) \
 		&& (defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI445))

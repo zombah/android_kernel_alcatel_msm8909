@@ -2992,10 +2992,7 @@ static int /*__devinit*/ taos_probe(struct i2c_client *client,
 	if (ret)
 		goto input_p_sysfs_failed;
 	//add by junfeng.zhou . for add the mmi test interface
-//	ret = device_create_file(&(client->dev),prox_attrs);
-//modify by yijun.chen for mmi interface
-	ret = add_sysfs_interfaces(&(client->dev),
-                        prox_attrs, ARRAY_SIZE(prox_attrs));
+	ret = device_create_file(&(client->dev),prox_attrs);
 	if (ret)
 		goto input_a_alloc_failed;
 bypass_prox_idev:

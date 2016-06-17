@@ -3797,37 +3797,28 @@ static ssize_t jrd_rawdata_result_show(struct device *dev,
 	char *s = buf;
 
 	//open test
-	s += sprintf(s, "**************************\n");
 	_gItoTestMode = ITO_TEST_MODE_OPEN_TEST;
 	DrvIcFwLyrScheduleMpTestWork(ITO_TEST_MODE_OPEN_TEST);
 	open_retval = DrvIcFwLyrGetMpTestResult();
 	if (open_retval != 0) {
-		s += sprintf(s, "Open Test: FAIL [%d]!\n", open_retval);
+		s += sprintf(s, "Open Test Fail [%d]!\n", open_retval);
 		//save fail channel data for rawdata store.
 		DrvOpenTestFailChannel_Save();
-		s = DrvMpTestGetTestFailChannel_Show(ITO_TEST_MODE_OPEN_TEST, &s);
-	} else if (open_retval == 0){
-		s += sprintf(s, "Open Test: PASS\n\n");
 	}
 
 	//short test
-	s += sprintf(s, "**************************\n");
 	_gItoTestMode = ITO_TEST_MODE_SHORT_TEST;
 	DrvIcFwLyrScheduleMpTestWork(ITO_TEST_MODE_SHORT_TEST);
 	//msleep(3500);	//make sure have enough time to test.
 	short_retval = DrvIcFwLyrGetMpTestResult();
 	if (short_retval != 0) {
-		s += sprintf(s, "Short Test: FAIL [%d]!\n", short_retval);
-		s = DrvMpTestGetTestFailChannel_Show(ITO_TEST_MODE_SHORT_TEST, &s);
-	} else if (short_retval == 0){
-		s += sprintf(s, "Short Test: PASS\n\n");
+		s += sprintf(s, "Short Test Fail [%d]!\n", short_retval);
 	}
 
-	s += sprintf(s, "**************************\n");
 	if (open_retval == 0 && short_retval == 0)
 		s += sprintf(s,"PASS\n");
 	else
-		s += sprintf(s,"FAIL\n");
+		s += sprintf(s,"NG\n");
 
 	mp_test_flag = 1;
 
@@ -3856,7 +3847,6 @@ static ssize_t jrd_tp_debug_store(struct device *dev,
 	return nSize;
 }
 
-#ifdef CONFIG_ENABLE_GESTURE_WAKEUP
 /*add by Yang.XU for gesture func support.
 	g_GestureWakeupMode[0]; 
 	0: close gesture function,
@@ -3865,6 +3855,7 @@ static ssize_t jrd_tp_debug_store(struct device *dev,
 static ssize_t jrd_gesture_switch_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
+	//jrd_gesture_handler = g_GestureWakeupMode[0] & 0x0F;
 	printk("coco: g_GestureWakeupMode[0] = %x\n", g_GestureWakeupMode[0]);
 
 	return sprintf(buf, "g_GestureWakeupMode = %d\n", g_GestureWakeupMode[0]);
@@ -3879,23 +3870,23 @@ static ssize_t jrd_gesture_switch_store(struct device *dev,
 	if (data->suspended)
 		return -EINVAL;
 	*/
+//	int jrd_gesture_hanlder = g_GestureWakeupMode[0]&0x0F;
+//	jrd_gesture_hanlder = g_GestureWakeupMode[0]&0x0F;
 
 	if (buf != NULL)
 			sscanf(buf, "%d", &g_GestureWakeupMode[0]); //convert type
-
+	
 	printk("coco: g_GestureWakeupMode = %x\n", g_GestureWakeupMode[0]);
 
 	return size;
 }
-
-static DEVICE_ATTR(jrd_gesture_switch, 0664, jrd_gesture_switch_show, jrd_gesture_switch_store);
-#endif
 
 static DEVICE_ATTR(jrd_tp_ic_info, 0644, jrd_tp_ic_info_show, NULL);
 static DEVICE_ATTR(firm_ver, 0644, jrd_tp_ic_info_show, NULL);
 static DEVICE_ATTR(rawdata, 0644, jrd_read_rawdata_show, jrd_read_rawdata_store);
 static DEVICE_ATTR(rd_result, 0644, jrd_rawdata_result_show, jrd_rawdata_result_store);
 static DEVICE_ATTR(jrd_ctp_debug, 0644, jrd_tp_debug_show, jrd_tp_debug_store);
+static DEVICE_ATTR(jrd_gesture_switch, 0664, jrd_gesture_switch_show, jrd_gesture_switch_store);
 
 static struct attribute *TP_sysfs_attrs[] = {
 	&dev_attr_jrd_tp_ic_info.attr,
@@ -3903,9 +3894,7 @@ static struct attribute *TP_sysfs_attrs[] = {
 	&dev_attr_rawdata.attr,
 	&dev_attr_rd_result.attr,
 	&dev_attr_jrd_ctp_debug.attr,
-	#ifdef CONFIG_ENABLE_GESTURE_WAKEUP
 	&dev_attr_jrd_gesture_switch.attr,
-	#endif
 	NULL,
 };
 static struct kobject *TP_ctrl_kobj = NULL;

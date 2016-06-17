@@ -863,7 +863,12 @@ static bool wcd_check_cross_conn(struct wcd_mbhc *mbhc)
 	struct snd_soc_codec *codec = mbhc->codec;
 	enum wcd_mbhc_plug_type plug_type = mbhc->current_plug;
 	s16 reg1;
-
+/*
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TMO)
+	pr_debug("%s: wcd_check_cross_conn retired.\n", __func__);
+	return false;
+#endif
+*/
 	if (wcd_swch_level_remove(mbhc)) {
 		pr_debug("%s: Switch level is low\n", __func__);
 		return false;
@@ -895,7 +900,7 @@ static bool wcd_check_cross_conn(struct wcd_mbhc *mbhc)
 	pr_debug("%s: leave, plug type: %d\n", __func__,  plug_type);
 
 	//return (plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP) ? true : false;
-	return false;
+	return false;//For tty device.
 }
 
 static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)

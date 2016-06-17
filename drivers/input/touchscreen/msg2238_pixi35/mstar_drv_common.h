@@ -164,8 +164,7 @@ extern struct regulator *TPvcc_i2c;
  * The below compile option is used to enable gesture wakeup.
  * By default, this compile option is disabled.
  */
-//modify by Yang.XU for enable gesture wakeup macro. [2015.10.12][PR1063126]
-#define CONFIG_ENABLE_GESTURE_WAKEUP
+//#define CONFIG_ENABLE_GESTURE_WAKEUP
 
 // ------------------- #ifdef CONFIG_ENABLE_GESTURE_WAKEUP ------------------- //
 #ifdef CONFIG_ENABLE_GESTURE_WAKEUP

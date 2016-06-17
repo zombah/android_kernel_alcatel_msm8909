@@ -31,7 +31,7 @@
 		qcom,mdss-dsi-h-pulse-width = <8>;	//36
 		qcom,mdss-dsi-h-sync-skew = <0>;
              qcom,mdss-dsi-v-front-porch = <15>;
-		qcom,mdss-dsi-v-back-porch = <12>;
+		qcom,mdss-dsi-v-back-porch = <14>;
 		qcom,mdss-dsi-v-pulse-width = <4>;
 		qcom,mdss-dsi-h-left-border = <0>;
 		qcom,mdss-dsi-h-right-border = <0>;
@@ -249,7 +249,9 @@
 05 01 00 00 14 00 02 29 00	//display on
 05 01 00 00 00 00 02 35 00      //TE on;
 ];	
-		qcom,mdss-dsi-off-command = [ 05 01 00 00 78 00 02 10 00];
+		qcom,mdss-dsi-off-command = [ 05 01 00 00 14 00 02 28 00
+						05 01 00 00 78 00 02 10 00];
+
 		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 		qcom,mdss-dsi-h-sync-pulse = <1>;

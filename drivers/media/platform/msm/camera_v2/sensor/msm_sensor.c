@@ -622,10 +622,10 @@ uint16_t msm_sensor_chk_0339_id(struct msm_sensor_ctrl_t *s_ctrl, int cam_id)
 	return 0;
 }
 
-uint16_t msm_sensor_read_moudule_info_ov5670_csp(struct msm_sensor_ctrl_t *s_ctrl)
+uint16_t msm_sensor_read_moudule_id_ov5670_csp(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	uint16_t rc = 0;
-	uint16_t module_id = 0,vcm_id=255,driver_ic=255,module_info=17;
+	uint16_t module_id = 0;
 	uint16_t temp1 = 0, otp_flag = 0, addr = 0;
 	struct msm_camera_i2c_client *sensor_i2c_client;
 	sensor_i2c_client = s_ctrl->sensor_i2c_client;
@@ -653,18 +653,13 @@ uint16_t msm_sensor_read_moudule_info_ov5670_csp(struct msm_sensor_ctrl_t *s_ctr
    }
 //read module_id
 	pr_err("%s: addr=0x%x, rc=%d\n", __func__, addr, rc);
-	
+
+	module_id = 0;
+
 	if(addr != 0){
 		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr, &module_id, MSM_CAMERA_I2C_BYTE_DATA);
-		//pr_err("%s: module_id=0x%x, rc=%d\n", __func__, module_id, rc);
-		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr+2, &vcm_id, MSM_CAMERA_I2C_BYTE_DATA);
-		//pr_err("%s: vcm_id=0x%x, rc=%d\n", __func__, vcm_id, rc);
-		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr+3, &driver_ic, MSM_CAMERA_I2C_BYTE_DATA);
-		//pr_err("%s: driver_ic=0x%x, rc=%d\n", __func__, driver_ic, rc);
 	}else{
 		module_id = 0;
-		vcm_id=255;
-		driver_ic=255;
 	}
 
 //stream off
@@ -673,32 +668,15 @@ uint16_t msm_sensor_read_moudule_info_ov5670_csp(struct msm_sensor_ctrl_t *s_ctr
 	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x5002,(0x08 & 0x08) | (temp1 & (~0x08)), MSM_CAMERA_I2C_BYTE_DATA);
 	if(rc < 0)
 		return rc;
-//check module_info
-	if(module_id==0x44)
-	{
-	  module_info &=0x0f;
-	}else if(module_id==0x0c)
-	{
-	  module_info |=0xf0;
-	}else{
-	  module_info=0x11;
-	}
 
-	if((vcm_id !=0)||(driver_ic !=0))
-	{
-	  module_info &=0xf0;
-	}else{
-	  module_info |=0x0f;
-	}
-	
-	return module_info;
+	return module_id;
 }
 
 int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	int rc = 0;
 	uint16_t chipid = 0;
-	uint16_t module_id=0,module_info = 17;
+	uint16_t module_id = 0;
 	struct msm_camera_i2c_client *sensor_i2c_client;
 	struct msm_camera_slave_info *slave_info;
 	const char *sensor_name;
@@ -738,7 +716,6 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		return rc;
 	}
 //start for ov5670csp module compatibility
-/*
 	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_pixi355")){
 		module_id = msm_sensor_read_moudule_id_ov5670_csp(s_ctrl);
 		pr_err("%s: %s: module_id=0x%x,rc=%d\n", __func__, sensor_name,module_id,rc);
@@ -761,32 +738,27 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		if(module_id != 0x0c)
 			return -22;
 	}
-*/
+
 	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b")){
-		module_info = msm_sensor_read_moudule_info_ov5670_csp(s_ctrl);
-		pr_err("%s: %s: module_info=0x%x,rc=%d\n", __func__, sensor_name,module_info,rc);
-	 	if(module_info!= 0x00)
+		module_id = msm_sensor_read_moudule_id_ov5670_csp(s_ctrl);
+		pr_err("%s: %s: module_id=0x%x,rc=%d\n", __func__, sensor_name,module_id,rc);
+		#ifdef  MINI_TEST_NO_OTP
+	 	if(module_id != 0x44)
 			{
 			return -22;
 	         	}
-	}
-
-	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_ff")){
-		module_info = msm_sensor_read_moudule_info_ov5670_csp(s_ctrl);
-		pr_err("%s: %s: module_info=0x%x,rc=%d\n", __func__, sensor_name,module_info,rc);
-		if((module_info != 0x0f)&&(module_info != 0xff))
+	 	#else
+		 if((module_id != 0x44)&&(module_id != 0)&&(module_id == 0x0c))//modify for null otp
 			{
 			return -22;
 			}
+	 	#endif
 	}
-
 	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_sunrise")){
-		module_info = msm_sensor_read_moudule_info_ov5670_csp(s_ctrl);
-		pr_err("%s: %s: module_info=0x%x,rc=%d\n", __func__, sensor_name,module_info,rc);
-		if(module_info != 0xf0)
-			{
+		module_id = msm_sensor_read_moudule_id_ov5670_csp(s_ctrl);
+		pr_err("%s: %s: module_id=0x%x,rc=%d\n", __func__, sensor_name,module_id,rc);
+		if(module_id != 0x0c)
 			return -22;
-			}
 	}
 //endif
 	/*sub camera check id mechanism added 201508*/
@@ -816,6 +788,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		pr_err("msm_sensor_match_id chip id doesnot match\n");
 		return -ENODEV;
 	}
+
 
 	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_pixi3_8_4g")){
 		module_id = msm_sensor_read_moudule_id_PC0FQ0009A(s_ctrl);
@@ -881,10 +854,7 @@ static int TCT_update_OTP(struct msm_sensor_ctrl_t *s_ctrl)
 	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_8909")){
 			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
 			update_otp_wb_ffqt(s_ctrl->sensor_i2c_client);
-	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_ff")){
-			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
-			update_otp_wb_ff(s_ctrl->sensor_i2c_client);
-	}else if (!strcmp(s_ctrl->sensordata->sensor_name, "s5k5e2_8909")){
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "s5k5e2_8909")){
 			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
             s5k5e2_pixi35_otp_read_update_wb(s_ctrl);
 	} else if ((!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_8909"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_8909_pixi355"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_q8v19w"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_q8v19w_pixi355"))){

@@ -4091,10 +4091,10 @@ fail_protect_mem:
 	device->power_enabled = false;
 	if (device->resources.fw.cookie)
 		subsystem_put(device->resources.fw.cookie);
-        /* jingang.yi@tcl.com 2016-02-04 PR  	1135905 */
-	//device->resources.fw.cookie = NULL;
+        /* jingang.yi@tcl.com 2016-02-04 PR 1135571 */
+        //device->resources.fw.cookie = NULL;
 fail_load_fw:
-	device->resources.fw.cookie = NULL;
+        device->resources.fw.cookie = NULL;
 	venus_hfi_iommu_detach(device);
 fail_iommu_attach:
 	venus_hfi_disable_unprepare_clks(device);

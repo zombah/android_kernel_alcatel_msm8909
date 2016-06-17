@@ -260,11 +260,6 @@ enum {
 static bool init_ok = false;
 static int ctp_detect_charger_in = 0;
 
-/*add by mike.li for gesture func*/
-//open gesture func.
-//#define CONFIG_TOUCHSCREEN_FT5X06_GESTURE 1
-static int jrd_gesture_handler = 0;	//0 -> closed	1 -> opening
-
 struct ft5x06_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
@@ -585,23 +580,31 @@ static DEVICE_ATTR(pocket, 0664,
 
 static int ft5x06_report_gesture_doubleclick(struct input_dev *ip_dev)
 {
-	printk("MIKE: %s\n", __func__);
-
-	input_report_key(ip_dev, KEY_POWER, 1);
-	input_sync(ip_dev);
-	input_report_key(ip_dev, KEY_POWER, 0);
-	input_sync(ip_dev);
-
+	int i;
+	for (i = 0; i < 2; i++) {
+		input_mt_slot(ip_dev, FT_GESTURE_DEFAULT_TRACKING_ID);
+		input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 1);
+		input_report_abs(ip_dev, ABS_MT_POSITION_X,
+					FT_GESTURE_DOUBLECLICK_COORD_X);
+		input_report_abs(ip_dev, ABS_MT_POSITION_Y,
+					FT_GESTURE_DOUBLECLICK_COORD_Y);
+		input_mt_report_pointer_emulation(ip_dev, false);
+		input_sync(ip_dev);
+		input_mt_slot(ip_dev, FT_GESTURE_DEFAULT_TRACKING_ID);
+		input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 0);
+		input_mt_report_pointer_emulation(ip_dev, false);
+		input_sync(ip_dev);
+	}
 	return 0;
 }
 
 static int ft5x06_report_gesture(struct i2c_client *i2c_client,
 		struct input_dev *ip_dev)
 {
-	//int i, temp, gesture_data_size;
-	//int gesture_coord_x, gesture_coord_y;
+	int i, temp, gesture_data_size;
+	int gesture_coord_x, gesture_coord_y;
 	int ret = -1;
-	//short pointnum = 0;
+	short pointnum = 0;
 	unsigned char buf[FT_GESTURE_POINTER_NUM_MAX *
 			FT_GESTURE_POINTER_SIZEOF + FT_GESTURE_DATA_HEADER];
 
@@ -620,7 +623,6 @@ static int ft5x06_report_gesture(struct i2c_client *i2c_client,
 		return 0;
 	}
 
-	#if 0
 	pointnum = (short)(buf[1]) & 0xff;
 	gesture_data_size = pointnum * FT_GESTURE_POINTER_SIZEOF +
 			FT_GESTURE_DATA_HEADER;
@@ -658,7 +660,6 @@ static int ft5x06_report_gesture(struct i2c_client *i2c_client,
 	input_mt_report_slot_state(ip_dev, MT_TOOL_FINGER, 0);
 	input_mt_report_pointer_emulation(ip_dev, false);
 	input_sync(ip_dev);
-	#endif
 
 	return 0;
 }
@@ -830,9 +831,7 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *dev_id)
 			return IRQ_HANDLED;
 	}
 
-	if (ft5x06_gesture_support_enabled() 
-			&& data->pdata->gesture_support
-			&& jrd_gesture_handler) {
+	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support) {
 		ft5x0x_read_reg(data->client, FT_REG_GESTURE_ENABLE,
 					&gesture_is_active);
 		if (gesture_is_active) {
@@ -1316,7 +1315,7 @@ static int ft5x06_ts_suspend(struct device *dev)
 
 	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support &&
 		device_may_wakeup(dev) &&
-		jrd_gesture_handler) {
+		data->gesture_pdata->gesture_enable_to_set) {
 
 		ft5x0x_write_reg(data->client, FT_REG_GESTURE_ENABLE, 1);
 		err = enable_irq_wake(data->client->irq);
@@ -1324,7 +1323,6 @@ static int ft5x06_ts_suspend(struct device *dev)
 			dev_err(&data->client->dev,
 				"%s: set_irq_wake failed\n", __func__);
 		data->suspended = true;
-		printk("coco: ft5x06_ts suspend in gesture mode err = %d\n", err);
 		return err;
 	}
 
@@ -1355,9 +1353,8 @@ static int ft5x06_ts_resume(struct device *dev)
 
 	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support &&
 		device_may_wakeup(dev) &&
-		//!(data->gesture_pdata->in_pocket) &&
-		jrd_gesture_handler) {
-		//data->gesture_pdata->gesture_enable_to_set) {
+		!(data->gesture_pdata->in_pocket) &&
+		data->gesture_pdata->gesture_enable_to_set) {
 
 		ft5x0x_write_reg(data->client, FT_REG_GESTURE_ENABLE, 0);
 		err = disable_irq_wake(data->client->irq);
@@ -1365,7 +1362,6 @@ static int ft5x06_ts_resume(struct device *dev)
 			dev_err(dev, "%s: disable_irq_wake failed\n",
 				__func__);
 		data->suspended = false;
-		printk("MIKE: ft5x06_ts resume from gesture mode err = %d\n", err);
 		return err;
 	}
 
@@ -1373,12 +1369,10 @@ static int ft5x06_ts_resume(struct device *dev)
 	if (err < 0)
 		return err;
 
-	/* del by mike.li for multidefined[2015.08.18]
 	if (ft5x06_gesture_support_enabled() && data->pdata->gesture_support &&
 		device_may_wakeup(dev) &&
 		data->gesture_pdata->in_pocket &&
-		jrd_gesture_handler) {
-		//data->gesture_pdata->gesture_enable_to_set) {
+		data->gesture_pdata->gesture_enable_to_set) {
 
 		ft5x0x_write_reg(data->client, FT_REG_GESTURE_ENABLE, 0);
 		err = disable_irq_wake(data->client->irq);
@@ -1387,7 +1381,7 @@ static int ft5x06_ts_resume(struct device *dev)
 				__func__);
 		data->suspended = false;
 		data->gesture_pdata->in_pocket = 0;
-	}*/
+	}
 
 	#if defined(USB_CHARGE_DETECT)
 	if (ctp_detect_charger_in) {
@@ -1795,7 +1789,7 @@ static int ft5x06_fw_upgrade_start(struct i2c_client *client,
 	if (r_buf[0] != fw_ecc) {
 		dev_err(&client->dev, "ECC error! dev_ecc=%02x fw_ecc=%02x\n",
 					r_buf[0], fw_ecc);
-		//return -EIO;	add by mike.li for ecc err.
+		return -EIO;
 	}
 
 	/* reset */
@@ -1869,12 +1863,6 @@ retry_update:
 
 	if (!fw_upgrade) {
 		dev_info(dev, "Exiting fw upgrade...\n");
-		rc = -EFAULT;
-		goto rel_fw;
-	}
-
-	if (update_retry >= 3) {
-		dev_info(dev, "Update retry fail!  Exiting fw upgrade!\n");
 		rc = -EFAULT;
 		goto rel_fw;
 	}
@@ -2403,37 +2391,6 @@ static ssize_t firm_ver_show (struct kobject *kobj,
    return sprintf ( buf, "ft TP module  (0xA8)is 0x%x ,fimware version(0xA6) is 0x%x\n",vendor_value,ver_value);
 }
 
-static ssize_t jrd_ic_info_show (struct kobject *kobj,
-		struct kobj_attribute *attr,
-		char *buf)
-{
-   u8 reg_ver;
-   u8 reg_vendor;
-   u8 ver_value,vendor_value;
-   int err;
-   char *ret = buf;
-
-   reg_ver = FT_REG_FW_VER;
-   err = ft5x06_i2c_read(ft_g_client, &reg_ver, 1, &ver_value, 1);
-   if (err < 0) {
-       pr_err( "TP FW version read failure\n");
-       return sprintf (buf, "can't read firmware version \n" );
-   }
-   pr_err("0xA6=0x%x\n",ver_value);
-   reg_vendor = 0xA8;
-   err = ft5x06_i2c_read(ft_g_client, &reg_vendor, 1, &vendor_value, 1);
-   if (err < 0) {
-      pr_err("TP FW version read failure\n");
-      return sprintf (buf, "ft irmware version(0xA6) is 0x%x\n can't read tp moudule  version \n" ,ver_value);
-   }
-	pr_err("0xA8=0x%x\n",vendor_value);
-
-	ret += sprintf(ret, "%s", "TP IC: FT6436\n");
-	ret += sprintf(ret, "TP module (0xA8) is 0x%x\n", vendor_value);
-	ret += sprintf(ret, "fimware version (0xA6) is 0x%x\n", ver_value);
-   return (ret - buf);
-}
-
 #if defined(FT_ITO_TEST)
 #define FT_INI_FILEPATH	"/system/etc/ft_rawdata.ini"
 #define FT_RAWDATA_SIZE		2*1024
@@ -2615,52 +2572,6 @@ static ssize_t ft5x06_rawdata_result_show(struct kobject *kobj,
     return (s-buf);
 }
 
-#ifdef CONFIG_TOUCHSCREEN_FT5X06_GESTURE
-/*add by mike.li for gesture func support.
-	int jrd_gesture_handler; 
-	0: close gesture function,
-	1: open gesture function.
-*/
-static ssize_t jrd_gesture_switch_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{
-	//printk("MIKE: handler = %d\n", jrd_gesture_handler);
-
-	return sprintf(buf, "jrd_gesture_handler = %d\n", jrd_gesture_handler);
-}
-
-
-static ssize_t jrd_gesture_switch_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t size)
-{
-	#if 0
-	struct ft5x06_ts_data *data = NULL;
-	data = dev_get_drvdata(dev);
-
-	if (data->suspended)
-		return -EINVAL;
-	#endif
-	if (buf != NULL)
-		sscanf(buf, "%d", &jrd_gesture_handler);
-	
-	#if 0
-	printk("MIKE: step 2\n");
-
-	if (jrd_gesture_handler > 0)
-		device_init_wakeup(&data->client->dev, 1);
-	else
-		device_init_wakeup(&data->client->dev, 0);
-	#endif
-
-	printk("jrd_gesture_handler = %d\n", jrd_gesture_handler);
-	return size;
-}
-
-static DEVICE_ATTR(jrd_gesture_switch, 0664, jrd_gesture_switch_show, jrd_gesture_switch_store);
-//add end for gesture func.
-#endif
-
 static struct kobj_attribute ft5x06_rawdata_attr = {
         .attr = {
                 .name = "rawdata",
@@ -2685,22 +2596,10 @@ static struct kobj_attribute ft5x06_firm_ver_attr = {
         .show = &firm_ver_show,
 };
 
-static struct kobj_attribute ft5x06_ic_info_attr = {
-        .attr = {
-                .name = "jrd_tp_ic_info",
-                .mode = S_IRUGO,
-        },
-        .show = &jrd_ic_info_show,
-};
-
 static struct attribute *ft5x06_rawdata_properties_attrs[] = {
 	&ft5x06_rawdata_attr.attr,
 	&ft5x06_ftsscaptest_attr.attr,
 	&ft5x06_firm_ver_attr.attr,
-#ifdef CONFIG_TOUCHSCREEN_FT5X06_GESTURE
-	&dev_attr_jrd_gesture_switch.attr,
-#endif
-	&ft5x06_ic_info_attr.attr,
 	NULL,
 };
 
@@ -2981,8 +2880,6 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 			     pdata->x_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_min,
 			     pdata->y_max, 0, 0);
-	//add by mike.li for gesture func.
-	input_set_capability(input_dev, EV_KEY, KEY_POWER);
 
 	err = input_register_device(input_dev);
 	if (err) {

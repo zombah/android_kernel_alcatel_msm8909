@@ -27,16 +27,11 @@
 #define RG_Ratio_Typical_Sunrise 626
 #define BG_Ratio_Typical_Sunrise 594
 
-#define RG_Ratio_Typical_FF 626
-#define BG_Ratio_Typical_FF 594
-
 static struct msm_camera_i2c_client *g_client;
 
 struct otp_struct {
 int module_integrator_id;
 int lens_id;
-int vcm_id;
-int driver_ic;
 int production_year;
 int production_month;
 int production_day;
@@ -228,11 +223,7 @@ mdelay(5);
 (*otp_ptr).module_integrator_id = OV5670_read_i2c(start_addr);
 printk("OTP:module_id=%d \n",(*otp_ptr).module_integrator_id);
 (*otp_ptr).lens_id = OV5670_read_i2c(start_addr + 1);
-//printk("OTP:lens_id=%d \n",(*otp_ptr).lens_id);
-(*otp_ptr).vcm_id = OV5670_read_i2c(start_addr + 2);
-//printk("OTP:vcm_id=%d \n",(*otp_ptr).vcm_id);
-(*otp_ptr).driver_ic = OV5670_read_i2c(start_addr + 3);
-//printk("OTP:driver_ic=%d \n",(*otp_ptr).driver_ic);
+printk("OTP:lens_id=%d \n",(*otp_ptr).lens_id);
 (*otp_ptr).production_year = OV5670_read_i2c(start_addr + 4);
 (*otp_ptr).production_month = OV5670_read_i2c(start_addr + 5);
 (*otp_ptr).production_day = OV5670_read_i2c(start_addr + 6);
@@ -415,7 +406,6 @@ if (i>3) {
 	// no valid wb OTP data
 	return 1;
 }
-//read_otp_info(otp_index, &current_otp);
 read_otp_wb(otp_index, &current_otp);
 
 rg = current_otp.rg_ratio ;
@@ -529,7 +519,6 @@ if (i>3) {
 	// no valid wb OTP data
 	return 1;
 }
-//read_otp_info(otp_index, &current_otp);
 read_otp_wb(otp_index, &current_otp);
 
 rg = current_otp.rg_ratio ;
@@ -540,64 +529,6 @@ bg = current_otp.bg_ratio;
 printk("OTP_sunrise:RG_G/RG_C=[%d:%d],BG_G/BG_C=[%d:%d]\n", RG_Ratio_Typical_Ewelly, rg, BG_Ratio_Typical_Ewelly, bg);
 nR_G_gain = (RG_Ratio_Typical_Ewelly*1000) / rg;
 nB_G_gain = (BG_Ratio_Typical_Ewelly*1000) / bg;
-nG_G_gain = 1000;
-
-if (nR_G_gain < 1000 || nB_G_gain < 1000)
-{
-if (nR_G_gain < nB_G_gain)
-	nBase_gain = nR_G_gain;
-else
-	nBase_gain = nB_G_gain;
-}
-else
-{
-	nBase_gain = nG_G_gain;
-}
-
-R_gain = 0x400 * nR_G_gain / (nBase_gain);
-B_gain = 0x400 * nB_G_gain / (nBase_gain);
-G_gain = 0x400 * nG_G_gain / (nBase_gain);
-
-update_awb_gain(R_gain, G_gain, B_gain);
-return 0;
-}
-
-int update_otp_wb_ff(struct msm_camera_i2c_client *i2c_client)
-{
-struct otp_struct current_otp;
-int i;
-int otp_index;
-int temp;
-int rg,bg,R_gain,B_gain,G_gain;
-int nR_G_gain, nB_G_gain, nG_G_gain;
-int nBase_gain;
-
-g_client = i2c_client;
-// R/G and B/G of current camera module is read out from sensor OTP
-// check first OTP with valid data
-for(i=1;i<=3;i++) {
-	temp = check_otp_wb(i);
-	if (temp == 2) {
-	otp_index = i;
-	break;
-	}
-}
-
-if (i>3) {
-	// no valid wb OTP data
-	return 1;
-}
-//read_otp_info(otp_index, &current_otp);
-read_otp_wb(otp_index, &current_otp);
-
-rg = current_otp.rg_ratio ;
-bg = current_otp.bg_ratio;
-
-//calculate G gain
-
-printk("OTP_sunrise:RG_G/RG_C=[%d:%d],BG_G/BG_C=[%d:%d]\n", RG_Ratio_Typical_FF, rg, BG_Ratio_Typical_FF, bg);
-nR_G_gain = (RG_Ratio_Typical_FF*1000) / rg;
-nB_G_gain = (BG_Ratio_Typical_FF*1000) / bg;
 nG_G_gain = 1000;
 
 if (nR_G_gain < 1000 || nB_G_gain < 1000)

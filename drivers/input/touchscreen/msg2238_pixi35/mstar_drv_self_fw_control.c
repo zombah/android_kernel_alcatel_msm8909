@@ -95,8 +95,8 @@ static u8 _gOneDimenFwData[MSG22XX_FIRMWARE_MAIN_BLOCK_SIZE*1024+MSG22XX_FIRMWAR
  * Note.
  * Please modify the name of the below .h depends on the vendor TP that you are using.
  */
-//modify by Yang.XU for upgrade fw to V5.15[2015.10.12][PR1063126]
-#include "msg22xx_xxxx_v15_update_bin.h"
+//modify by Yang.XU for upgrade fw to V5.14[2015.09.09][PR1078470]
+#include "msg22xx_xxxx_v14_update_bin.h"
 #include "msg22xx_yyyy_update_bin.h"
 
 static u32 _gUpdateRetryCount = UPDATE_FIRMWARE_RETRY_COUNT;

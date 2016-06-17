@@ -550,13 +550,12 @@ int mdp3_calc_ppp_res(struct msm_fb_data_type *mfd,  struct blit_req_list *lreq)
 	if (lreq->req_list[0].flags & MDP_SOLID_FILL) {
 		req = &(lreq->req_list[0]);
 		mdp3_get_bpp_info(req->dst.format, &bpp);
-        /* modify from qcom patch (better performance) CR1007916-jianhua.he@tcl.com-20150522 */
 		ppp_res.solid_fill_pixel += req->dst_rect.w * req->dst_rect.h;
 		ppp_res.solid_fill_byte += req->dst_rect.w * req->dst_rect.h *
 						bpp.bpp_num / bpp.bpp_den;
 		if ((panel_info->yres/2 > req->dst_rect.h) ||
-			(mdp3_res->solid_fill_vote_en)) {
-			pr_debug("Solid fill less than H/2 or fill vote %d\n",
+		(mdp3_res->solid_fill_vote_en)) {
+			pr_debug("Solid fill less than H/2 or solid_fill_vote_en %d\n",
 				mdp3_res->solid_fill_vote_en);
 			ATRACE_END(__func__);
 			return 0;
@@ -633,8 +632,8 @@ int mdp3_calc_ppp_res(struct msm_fb_data_type *mfd,  struct blit_req_list *lreq)
 		honest_ppp_ab = ppp_res.solid_fill_byte * 4;
 		pr_debug("solid fill honest_ppp_ab %llu\n", honest_ppp_ab);
 	} else {
-	honest_ppp_ab += ppp_res.solid_fill_byte;
-	mdp3_res->solid_fill_vote_en = true;
+		honest_ppp_ab += ppp_res.solid_fill_byte;
+		mdp3_res->solid_fill_vote_en = true;
         }
 
 	honest_ppp_ab = honest_ppp_ab * fps;

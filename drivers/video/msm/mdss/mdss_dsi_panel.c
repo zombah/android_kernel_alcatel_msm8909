@@ -33,6 +33,7 @@
 #define NT35596_MAX_ERR_CNT 2
 
 #define MIN_REFRESH_RATE 30
+bool IS_NT35521S_LCD;
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 #ifdef CONFIG_TCT_8909_PIXI445_TF
@@ -1838,6 +1839,8 @@ int mdss_dsi_panel_init(struct device_node *node,
 	static const char *panel_name;
 	struct mdss_panel_info *pinfo;
 
+      IS_NT35521S_LCD = false;
+	  
 	if (!node || !ctrl_pdata) {
 		pr_err("%s: Invalid arguments\n", __func__);
 		return -ENODEV;
@@ -1855,6 +1858,16 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_info("%s: Panel Name = %s\n", __func__, panel_name);
 		strlcpy(&pinfo->panel_name[0], panel_name, MDSS_MAX_PANEL_LEN);
 	}
+	
+	//add by richard.liang for NT35521S
+	#ifdef CONFIG_TCT_8909_PIXI355
+	      if(strcmp(panel_name, "nt35521s txd hd video mode dsi panel") == 0)
+		  	IS_NT35521S_LCD = true;
+		else
+			IS_NT35521S_LCD = false;
+	#endif
+	//end richard
+	
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);

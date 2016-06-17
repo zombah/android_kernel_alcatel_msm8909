@@ -176,6 +176,10 @@
 		qcom,mdss-dsi-traffic-mode = "burst_mode";
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;		
+		//add for sleepin LCD current drain issue
+                qcom,ulps-enabled;
+                qcom,suspend-ulps-enabled;
+                //end for sleepin LCD current drain issue
 		/*add clk and data per line goes to lp11*/
 		qcom,mdss-dsi-hfp-power-mode;
 		/*add clk and data per line goes to lp11*/	

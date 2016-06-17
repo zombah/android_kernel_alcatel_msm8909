@@ -58,7 +58,9 @@
 #define STK_TUNE0
 #define CALI_PS_EVERY_TIME
 //add START by yijun.chen@tcl.com to improve als performance(HW)-pr1065727-20150815
-#define STK_DEBUG_PRINTF
+#ifndef BUILD_USER_VERSION
+	#define STK_DEBUG_PRINTF
+#endif
 //add END by yijun.chen@tcl.com to improve als performance(HW)-pr1065727-20150815
 //#define SPREADTRUM_PLATFORM
 #define STK_ALS_FIR

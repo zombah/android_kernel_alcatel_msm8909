@@ -2940,12 +2940,12 @@ char *DrvMpTestGetTestFailChannel_Show(ItoTestMode_e eItoTestMode, char **pFailC
 
 	if (eItoTestMode == ITO_TEST_MODE_OPEN_TEST) {
 		*pFailChannel += sprintf(*pFailChannel, "Open test fail channel show\n");
-		for (i = 0; i < _gTestFailChannelCount_open && i < 3; i ++) {
+		for (i = 0; i < _gTestFailChannelCount_open; i ++) {
 			*pFailChannel += sprintf(*pFailChannel, " %2d ", _gTestFailChannel_open[i]);
 		}
     } else if (eItoTestMode == ITO_TEST_MODE_SHORT_TEST) {
 		*pFailChannel += sprintf(*pFailChannel, "Short test fail channel show\n");
-		for (i = 0; i < _gTestFailChannelCount && i < 3; i ++) {
+		for (i = 0; i < _gTestFailChannelCount; i ++) {
 			*pFailChannel += sprintf(*pFailChannel, " %2d ", _gTestFailChannel[i]);
 		}
     } else {

@@ -126,8 +126,6 @@
 			focaltech,display-coords = <0 0 480 854>;
 			focaltech,panel-coords = <0 0 480 954>;
 			focaltech,ignore-id-check;
-			/*add by Yang.XU for gesture support*/
-			focaltech,gesture-support;
 		};
 	};
 
@@ -289,8 +287,7 @@
 		qcom,vref-batt-therm = <1800000>;
 
 		//#include "batterydata-palladium.dtsi"
-		//#include "TCL_TLi020A1_1956265_2000mAh_3p4COV_VBMS_Final-0729.dtsi"
-		#include "TCL2000_QBCSW_Averaged_Output_File_635779972806604723.dtsi"
+		#include "TCL_TLi020A1_1956265_2000mAh_3p4COV_VBMS_Final-0729.dtsi"
 	};
 };
 

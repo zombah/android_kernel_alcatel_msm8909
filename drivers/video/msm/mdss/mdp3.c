@@ -2274,7 +2274,6 @@ static void mdp3_dma_underrun_intr_handler(int type, void *arg)
 	mdp3_res->underrun_cnt++;
 	pr_err("display underrun detected count=%d\n",
 			mdp3_res->underrun_cnt);
-	ATRACE_INT("mdp3_dma_underrun_intr_handler", mdp3_res->underrun_cnt);
 }
 
 static ssize_t mdp3_show_capabilities(struct device *dev,

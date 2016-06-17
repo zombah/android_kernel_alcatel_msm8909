@@ -25,6 +25,7 @@
 #define PWRDN_B BIT(7)
 
 static struct dsi_clk_desc dsi_pclk;
+extern bool IS_NT35521S_LCD;
 
 void mdss_dsi_phy_sw_reset(struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -969,6 +970,16 @@ static int mdss_dsi_ulps_config(struct mdss_dsi_ctrl_pdata *ctrl,
 			__func__, enable);
 		return -ENOTSUPP;
 	}
+
+	//add by richard.liang for NT35521S LCD
+	#ifdef CONFIG_TCT_8909_PIXI355
+          if(IS_NT35521S_LCD)
+          {
+	        printk(KERN_NOTICE "%s: Current LCD is NT35521S\n", __func__);
+	        return 0;
+          }
+	#endif
+	//end richard
 
 	/*
 	 * No need to enter ULPS when transitioning from splash screen to

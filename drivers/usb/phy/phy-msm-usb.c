@@ -2994,6 +2994,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 	u32 line_state, dm_vlgc;
 	unsigned long delay;
         u32 func_ctrl; //JRD BSP eric.gong "QC patch:Disable QC2.0 sw entry" 
+
 	dev_dbg(phy->dev, "chg detection work\n");
 	msm_otg_dbg_log_event(phy, "CHG DETECTION WORK",
 			motg->chg_state, phy->state);

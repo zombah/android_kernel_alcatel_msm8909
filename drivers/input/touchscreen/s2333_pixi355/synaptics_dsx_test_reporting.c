@@ -831,6 +831,12 @@ static struct bin_attribute test_report_data = {
 static struct synaptics_rmi4_f54_handle *f54;
 static struct synaptics_rmi4_f55_handle *f55;
 
+/*Add jerry.qian for cover function of synaptics start*/
+#define COVER_MODE_ADDR 0x042D
+#define COVER_MODE_ON 0x01
+#define COVER_MODE_OFF 0x00
+/*end*/
+
 DECLARE_COMPLETION(test_remove_complete);
 
 static bool test_report_type_valid(enum f54_report_types report_type)
@@ -3213,6 +3219,8 @@ static ssize_t jrd_read_rawdata_show(struct device *dev,
 		}
 		s += sprintf(s,"\n");
 	}
+	g_rmi4_data->reset_device(g_rmi4_data);
+	//synaptics_rmi4_reset_device(g_rmi4_data);
 	 return (s-buf);
 }
 
@@ -3352,6 +3360,8 @@ static ssize_t jrd_rd_result_show(struct device *dev,
 	else
 		s += sprintf(s,"PASS\n");
 
+       // synaptics_rmi4_reset_device(g_rmi4_data);
+       g_rmi4_data->reset_device(g_rmi4_data);
 	 return (s-buf);
 }
 
@@ -3414,17 +3424,68 @@ static ssize_t jrd_gesture_switch_store(struct device *dev,
 	return size;
 }
 
+unsigned int gIncover = 0;
+static ssize_t jrd_cover_status_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+       if( gIncover > 0) 
+	return sprintf(buf, "enable cover \n");
+	else
+       return sprintf(buf, "disable cover \n");
+}
+
+static ssize_t jrd_cover_status_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+       unsigned int input;
+	int retval;
+       unsigned char glover_finger_ctrl=0;
+
+	if (sscanf(buf, "%u", &input) != 1)
+		return -EINVAL;
+
+	input = input > 0 ? 1 : 0;
+
+	gIncover = input;
+
+	if (input)
+	{
+		glover_finger_ctrl = COVER_MODE_ON;
+		retval = synaptics_rmi4_reg_write(g_rmi4_data, 
+			COVER_MODE_ADDR, &glover_finger_ctrl, sizeof(glover_finger_ctrl));
+		if (retval < 0) {
+			printk("jrd_cover_status_store: Failed to switch on cover mode fail \n");
+			return -1;
+		}
+
+	}
+        else
+        {
+		glover_finger_ctrl = COVER_MODE_OFF;
+		retval = synaptics_rmi4_reg_write(g_rmi4_data, 
+			COVER_MODE_ADDR, &glover_finger_ctrl, sizeof(glover_finger_ctrl));
+		if (retval < 0) {
+                        printk("jrd_cover_status_store: Failed to switch off cover mode fail \n");
+			return -1;
+		}
+        }
+        return size;
+}
+
 //static DEVICE_ATTR(rawdata, 0664, test_sysfs_read_report_show, NULL);//jrd_read_rawdata_show
 static DEVICE_ATTR(rawdata, 0644, jrd_read_rawdata_show, NULL);
 static DEVICE_ATTR(jrd_tp_ic_info, 0644, jrd_ctp_info_show, NULL);
 static DEVICE_ATTR(jrd_gesture_switch, 0664, jrd_gesture_switch_show, jrd_gesture_switch_store);
 static DEVICE_ATTR(rd_result, 0644, jrd_rd_result_show, NULL);
+static DEVICE_ATTR(jrd_cover_status, 0664, jrd_cover_status_show, jrd_cover_status_store);
 static struct kobject *TP_ctrl_kobj = NULL;
 static struct attribute *TP_sysfs_attrs[] = {
 	&dev_attr_jrd_gesture_switch.attr,
 	&dev_attr_jrd_tp_ic_info.attr,
 	&dev_attr_rawdata.attr,
 	&dev_attr_rd_result.attr,
+	&dev_attr_jrd_cover_status.attr,
 	NULL,
 };
 

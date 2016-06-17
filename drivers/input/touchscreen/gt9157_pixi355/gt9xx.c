@@ -165,6 +165,49 @@ extern s32 gt9_read_raw_cmd(struct i2c_client* client);
 extern s32 gtp_read_rawdata(struct i2c_client* client, u16* data);
 extern s32 gt9_read_coor_cmd(struct i2c_client *client);
 
+/*jerry [BUGFIX]TP INT pull-disable enable.*/
+#define GOODIX_PINCTRL_STATE_SLEEP "pmx_ts_int_suspend"
+#define GOODIX_PINCTRL_STATE_DEFAULT "pmx_ts_int_active"
+/*[BUGFIX]TP INT pull-up enable.*/
+struct gtp_pinctrl_info {
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *gpio_state_active;
+	struct pinctrl_state *gpio_state_suspend;
+};
+
+
+static struct gtp_pinctrl_info gt9xx_pctrl;
+static int gtp_pinctrl_init(struct device *dev)
+{
+	gt9xx_pctrl.pinctrl = devm_pinctrl_get(dev);
+
+	if (IS_ERR_OR_NULL(gt9xx_pctrl.pinctrl)) {
+		pr_err("%s:%d Getting pinctrl handle failed\n",
+			__func__, __LINE__);
+		return -EINVAL;
+	}
+	gt9xx_pctrl.gpio_state_active = pinctrl_lookup_state(
+					       gt9xx_pctrl.pinctrl,
+					       GOODIX_PINCTRL_STATE_DEFAULT);
+
+	if (IS_ERR_OR_NULL(gt9xx_pctrl.gpio_state_active)) {
+		pr_err("%s:%d Failed to get the active state pinctrl handle\n",
+			__func__, __LINE__);
+		return -EINVAL;
+	}
+	gt9xx_pctrl.gpio_state_suspend = pinctrl_lookup_state(
+						gt9xx_pctrl.pinctrl,
+						GOODIX_PINCTRL_STATE_SLEEP);
+
+	if (IS_ERR_OR_NULL(gt9xx_pctrl.gpio_state_suspend)) {
+		pr_err("%s:%d Failed to get the suspend state pinctrl handle\n",
+				__func__, __LINE__);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+/*jerry [BUGFIX]TP INT pull-disable enable.*/
 
 /*******************************************************
 Function:
@@ -1009,7 +1052,7 @@ static void goodix_ts_work_func(struct work_struct *work)
 #endif
     pre_key = key_value;
 
-    GTP_DEBUG("pre_touch:%02x, finger:%02x.", pre_touch, finger);
+//    GTP_DEBUG("pre_touch:%02x, finger:%02x.", pre_touch, finger);
 
 #if GTP_ICS_SLOT_REPORT
 
@@ -1052,7 +1095,7 @@ static void goodix_ts_work_func(struct work_struct *work)
             touch_index |= (0x01<<id);
         }
         
-        GTP_DEBUG("id = %d,touch_index = 0x%x, pre_touch = 0x%x\n",id, touch_index,pre_touch);
+//        GTP_DEBUG("id = %d,touch_index = 0x%x, pre_touch = 0x%x\n",id, touch_index,pre_touch);
         for (i = 0; i < GTP_MAX_TOUCH; i++)
         {
         #if GTP_WITH_PEN
@@ -3166,6 +3209,16 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 
     INIT_WORK(&ts->work, goodix_ts_work_func);
     ts->client = client;
+
+/*jerry [BUGFIX] TP INT pull-disable.*/
+    gtp_pinctrl_init(&ts->client->dev);
+    ret = pinctrl_select_state(gt9xx_pctrl.pinctrl,
+				gt9xx_pctrl.gpio_state_active);
+    if (ret)
+		GTP_ERROR("%s:%d cannot set pin to suspend state",
+			__func__, __LINE__);
+/*jerry [BUGFIX]TP INT pull-disable.*/
+
     spin_lock_init(&ts->irq_lock);          // 2.6.39 later
     // ts->irq_lock = SPIN_LOCK_UNLOCKED;   // 2.6.39 & before
 #if GTP_ESD_PROTECT
@@ -3385,6 +3438,15 @@ static void goodix_ts_suspend(struct goodix_ts_data *ts)
     GTP_INFO("System suspend.");
 
     ts->gtp_is_suspend = 1;
+
+     /*jerry [BUGFIX]TP INT pull-disable.*/
+    ret = pinctrl_select_state(gt9xx_pctrl.pinctrl,
+			gt9xx_pctrl.gpio_state_suspend);
+	if (ret)
+		GTP_ERROR("%s:%d cannot set pin to suspend state",
+			__func__, __LINE__);
+    /*jerry [BUGFIX]TP INT pull-disable.*/
+
 #if GTP_ESD_PROTECT
     gtp_esd_switch(ts->client, SWITCH_OFF);
 #endif
@@ -3450,6 +3512,15 @@ static void goodix_ts_resume(struct goodix_ts_data *ts)
 #endif
     
     ret = gtp_wakeup_sleep(ts);
+
+/*jerry [BUGFIX]TP INT pull-disable.*/
+    ret = pinctrl_select_state(gt9xx_pctrl.pinctrl,
+			gt9xx_pctrl.gpio_state_active);
+	if (ret)
+		GTP_ERROR("%s:%d cannot set pin to suspend state",
+			__func__, __LINE__);
+
+/*jerry [BUGFIX]TP INT pull-disable.*/
 
 #if GTP_GESTURE_WAKEUP
        //Add by Luoxingxing to add the gesture switch.

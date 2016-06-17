@@ -495,7 +495,8 @@
 /*yijun.chen@tcl.com add for ecompass 2nd source-20150817-END*/
 
 	/*- Cedar.Tan add for sensor driver,20150422*/
-
+//START-Delete by Luoxingxing 
+#if 0
     /*Add kernel Lcd power ic +/-5v by jhyu*/
     tps65132@3e {
         compatible = "ti,tps65132";
@@ -528,6 +529,8 @@
 			};
 		};
 		/*Add kernel lcd power ic +/-5v By jhyu*/
+#endif		
+//END-Delete by Luoxingxing 
 };
 
 &pm8909_gpios {
@@ -661,7 +664,7 @@
 	};
 };
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_hx8394d_txd_hd_vid>;
+	qcom,dsi-pref-prim-pan = <&dsi_nt35521s_txd_hd_vid>;
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
@@ -670,7 +673,13 @@
 	qcom,platform-bklight-en-gpio = <&msm_gpio 37 0>;
         qcom,platform-te-gpio = <&msm_gpio 24 0>;  //add by SH richard.liang
 
-    vsp-supply = <&tps65132_pos>;
+	//Add by Luoxingxing 
+	qcom,platform-bias-enp-gpio = <&msm_gpio 11 0>;
+	qcom,platform-bias-enn-gpio = <&msm_gpio 17 0>;
+
+//START-Delete by Luoxingxing 
+#if 0
+    	vsp-supply = <&tps65132_pos>;
 	vsn-supply = <&tps65132_neg>;
 	qcom,panel-supply-entries {
 		#address-cells = <1>;
@@ -695,6 +704,8 @@
                         qcom,supply-post-off-sleep = <15>;
 		};
 	};
+#endif	
+//END-Delete by Luoxingxing 
 };
 
 /* CoreSight */

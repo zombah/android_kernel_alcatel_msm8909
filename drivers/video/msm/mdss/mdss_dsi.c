@@ -40,6 +40,13 @@ static int lcd_power_en,lcd_bias_enp,lcd_bias_enn;
 static int lcd_power_en,lcd_bias_en;
 #endif
 /* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */
+
+#ifdef CONFIG_TCT_8909_PIXI355
+int lcd_bias_enp,lcd_bias_enn;
+static int lcd_tps65132_disable(void);
+static int lcd_tps65132_enable(struct mdss_panel_data *pdata);
+#endif
+
 static int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
 
@@ -105,6 +112,7 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 	msleep(20);
         gpio_set_value((ctrl_pdata->rst_gpio), 1);
         gpio_free(ctrl_pdata->rst_gpio);
+	msleep(60);
 #endif
 /*add end sleep in mode. panel reset H-L-H 2015-7-13*/
 
@@ -184,6 +192,13 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 			}
 #endif
 /* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */
+
+/*START-Add by TCTSH.Luoxingxing , 2015/11/19*/
+#ifdef CONFIG_TCT_8909_PIXI355
+	lcd_tps65132_disable();
+#endif
+/*END-Add by TCTSH.Luoxingxing , 2015/11/19*/
+
 	if (ctrl_pdata->panel_bias_vreg) {
 		pr_debug("%s: Disabling panel bias vreg. ndx = %d\n",
 		       __func__, ctrl_pdata->ndx);
@@ -335,6 +350,12 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	}
 #endif
 /* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */
+
+/*START-Add by TCTSH.Luoxingxing , 2015/11/19*/
+#if (defined CONFIG_TCT_8909_PIXI355)
+	 lcd_tps65132_enable(pdata);
+#endif
+/*END-Add by TCTSH.Luoxingxing , 2015/11/19*/
 	/*
 	 * If continuous splash screen feature is enabled, then we need to
 	 * request all the GPIOs that have already been configured in the
@@ -879,8 +900,8 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 
 	return 0;
 }
-
-#ifdef CONFIG_TCT_8909_PIXI355
+/* Pixi455_geophone add begin by BSP for kernel lcd bias voltage*/
+#ifdef CONFIG_TCT_8909_PIXI455_GEOPHONE
 #include <linux/i2c.h>
 
 #define LCD_TPS65132_I2C_ADDRESS		       0x3E
@@ -931,6 +952,64 @@ static void lcd_tps65132_init(void)
 	}
 }
 #endif
+
+#ifdef CONFIG_TCT_8909_PIXI355
+/*Add by Luoxingxing to power off tps65132*/
+static int lcd_tps65132_enable(struct mdss_panel_data *pdata)
+{
+	int ret = 0;
+
+	pr_info("[==LCD==]:%s\n", __func__);
+	if (!pdata->panel_info.cont_splash_enabled){		
+		if (gpio_is_valid(lcd_bias_enp)){
+			ret = gpio_request(lcd_bias_enp,"lcd_bias_p_enable");
+			if (ret) {
+				pr_err("request lcd_bias_p_enable gpio failed, ret=%d\n",ret);
+			}
+		}
+		if (gpio_is_valid(lcd_bias_enn)){
+			ret = gpio_request(lcd_bias_enn,"lcd_bias_n_enable");
+			if (ret) {
+				pr_err("request lcd_bias_n_enable gpio failed, ret=%d\n",ret);
+			}
+		}
+
+		gpio_direction_output(lcd_bias_enp,1);
+		mdelay(10);
+		gpio_direction_output(lcd_bias_enn,1);
+		gpio_free(lcd_bias_enn);
+		gpio_free(lcd_bias_enp);
+	}
+	return ret;
+}
+static int lcd_tps65132_disable(void)
+{
+	int ret = 0;
+
+	pr_info("[==LCD==]:%s\n", __func__);
+
+	if (gpio_is_valid(lcd_bias_enp)){
+		ret = gpio_request(lcd_bias_enp,"lcd_bias_p_enable");
+		if (ret) {
+			pr_err("request lcd_bias_p_enable gpio failed, ret=%d\n",ret);
+		}
+	}
+	if (gpio_is_valid(lcd_bias_enn)){
+		ret = gpio_request(lcd_bias_enn,"lcd_bias_n_enable");
+		if (ret) {
+		pr_err("request lcd_bias_n_enable gpio failed, ret=%d\n",ret);
+		}
+	}
+
+	gpio_direction_output(lcd_bias_enn,0);
+	msleep(10);		
+	gpio_direction_output(lcd_bias_enp,0);
+	gpio_free(lcd_bias_enn);
+	gpio_free(lcd_bias_enp);
+	return ret;
+}
+#endif
+/* Pixi455_geophone add end by BSP for kernel lcd bias voltage*/
 static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -963,7 +1042,8 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		goto error;
 	}
     /* resume lcd output +/-5.5v by BaoChangSheng */
-#ifdef CONFIG_TCT_8909_PIXI355
+//#ifdef CONFIG_TCT_8909_PIXI355
+#ifdef CONFIG_TCT_8909_PIXI455_GEOPHONE
 	lcd_tps65132_init(); //jhyu_fix 1004527, modify this funtion from int return to void return.
 #endif
 /* resume lcd output +/-5.5v by BaoChangSheng */
@@ -2214,6 +2294,25 @@ int dsi_panel_device_register(struct device_node *pan_node,
 						__func__, __LINE__);
 #endif
 /* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */	
+
+/*START-Add by TCTSH.Luoxingxing , 2015/11/19*/
+#ifdef CONFIG_TCT_8909_PIXI355
+	pr_err("[LCD] %s:get lcd_bias_enp gpio \n",__func__);
+	lcd_bias_enp = of_get_named_gpio(ctrl_pdev->dev.of_node,
+			 "qcom,platform-bias-enp-gpio", 0);
+	if (!gpio_is_valid(lcd_bias_enp))
+		pr_err("%s:%d, lcd_bias_enp gpio not specified\n",
+						__func__, __LINE__);
+
+	pr_err("[LCD] %s:get lcd_bias_enp gpio \n",__func__);
+	lcd_bias_enn = of_get_named_gpio(ctrl_pdev->dev.of_node,
+			 "qcom,platform-bias-enn-gpio", 0);
+	if (!gpio_is_valid(lcd_bias_enn))
+		pr_err("%s:%d, lcd_bias_enn gpio not specified\n",
+						__func__, __LINE__);
+
+#endif
+/*END-Add by TCTSH.Luoxingxing , 2015/11/19*/
 
 	if (pinfo->mode_gpio_state != MODE_GPIO_NOT_VALID) {
 
