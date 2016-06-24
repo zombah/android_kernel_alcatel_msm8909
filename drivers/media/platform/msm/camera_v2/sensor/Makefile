@@ -9,4 +9,3 @@ obj-$(CONFIG_MT9M114) += mt9m114.o
 obj-$(CONFIG_OV5645) += ov5645.o
 obj-$(CONFIG_OV5645) += ov7695.o
 obj-$(CONFIG_GC0310) += gc0310.o
-obj-$(CONFIG_GC0310_YUV_PIXI455TF) += gc0310_yuv_pixi455tf.o

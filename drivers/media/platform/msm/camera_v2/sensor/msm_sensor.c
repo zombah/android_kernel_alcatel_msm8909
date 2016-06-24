@@ -25,12 +25,7 @@
 #include "ov5670_pixi35_v4l2_tct_OTP.h"
 #include "s5k5e2_pixi35_v4l2_tct_OTP.h"
 #include "s5k4h5yc_pixi35_v4l2_tct_OTP.h"
-#include "s5k5e2_pixi3_7_v4l2_tct_OTP.h"
-#include "ov5670_pixo_7s_v4l2_tct_OTP.h"
 #include "ov8858_pixi35_v4l2_tct_OTP.h"
-#include "ov5670_pixi445_v4l2_tct_OTP.h"
-#include "ov5670_pixi3_8_4g_v4l2_tct_OTP.h"
-#include "ov5670csp_pixi3_8_4g_v4l2_tct_OTP.h"
 
 #endif
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
