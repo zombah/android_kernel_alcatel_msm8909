@@ -67,17 +67,17 @@ obj-$(CONFIG_BMP18X)			+= bmp18x-core.o
 obj-$(CONFIG_BMP18X_I2C)		+= bmp18x-i2c.o
 obj-$(CONFIG_SENSORS_MMC3416X)		+= mmc3416x.o
 obj-$(CONFIG_SENSORS_MMA8X5X)	  	+= mma8x5x.o
-# obj-$(CONFIG_SENSORS_STK3X1X)		+= stk3x1x.o
+obj-$(CONFIG_SENSORS_STK3X1X)		+= stk3x1x.o
 obj-$(CONFIG_SENSORS_CAPELLA_CM36283)	+= cm36283.o
 obj-$(CONFIG_SENSORS_MPU6050)		+= mpu6050.o
 obj-$(CONFIG_SENSORS_AKM8963)		+= akm8963.o
 # obj-$(CONFIG_SENSORS_AKM09911)		+= akm09911.o
-# obj-$(CONFIG_SENSORS_LIS3DH)		+= lis3dh_acc.o
+obj-$(CONFIG_SENSORS_LIS3DH)		+= lis3dh_acc.o
 obj-$(CONFIG_SENSORS_AP3426)		+= ap3426.o
 # obj-$(CONFIG_SENSORS_BMA2X2)	+= bstclass.o
 
 # obj-$(CONFIG_SENSORS_BMA2X2)	+= bma2x2.o
-# obj-$(CONFIG_SENSORS_LTR553)	+= ltr553.o
+obj-$(CONFIG_SENSORS_LTR553)	+= ltr553.o
 
 # ifeq ($(CONFIG_SENSORS_BMA2X2_ENABLE_INT1),y)
 # 	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT1
@@ -89,54 +89,4 @@ obj-$(CONFIG_SENSORS_AP3426)		+= ap3426.o
 
 ifdef CONFIG_TCT_8909_PIXI35
 obj-$(CONFIG_SENSORS)       += pixi35/
-endif
-
-ifdef CONFIG_TCT_8909_PIXI355
-obj-$(CONFIG_SENSORS)       += pixi355/
-endif
-
-# + Cedar.Tan add for product pixi355_tmo,20150521
-ifdef CONFIG_TCT_8909_PIXI355_TMO
-obj-$(CONFIG_SENSORS)       += pixi355_tmo/
-endif
-# - Cedar.Tan add for product pixi355_tmo,20150521
-
-# + yijun.chen add for product pixi445,20150720
-ifdef CONFIG_TCT_8909_PIXI445_TF
-obj-$(CONFIG_SENSORS)       += pixi445_tf/
-endif
-# - yijun.chen add for product pixi445,20150720
-
-#[PLATFORM]-Add-BEGIN by TCTNB.ZXZ, RR-876380, 2015/01/03, add stk3311 sensor for pop3
-ifdef CONFIG_TCT_8909_POP3
-obj-$(CONFIG_SENSORS_STK3X1X_TCT)       += stk3x1x_tct/
-endif
-#[PLATFORM]-Add-END by TCTNB.ZXZ
-#[PLATFORM]-Add by TCTNB.ZXZ, RR-966458, 2015/04/02, add KXTJ2-1009 Gsensor
-obj-$(CONFIG_SENSORS_KXTJ9_TCT)       += kxtj9_tct/
-#[PLATFORM]-Add-END by TCTNB.ZXZ
-
-#[PLATFORM]-Add-BEGIN by TCTNB.ZXZ, RR-876617, 2015/01/04, add BMA223 sensor for pop3
-ifdef CONFIG_TCT_8909_POP3
-obj-$(CONFIG_SENSORS_BMA2X2_TCT)       += bma2x2_tct/
-
-ifeq ($(CONFIG_SENSORS_BMA2X2_ENABLE_INT1_TCT),y)
-	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT1
-endif
-
-ifeq ($(CONFIG_BOSCH_BMA2X2_ENABLE_INT2_TCT),y)
-	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT2
-endif
-
-endif
-#[PLATFORM]-Add-END by TCTNB.ZXZ
-
-#[PLATFORM]-Add-BEGIN by TCTNB.ZXZ, FR-966665, 2015/04/27, add ADUX1050 sensor
-obj-$(CONFIG_SENSORS_PSENSOR)   += audx1050/
-#[PLATFORM]-Add-END by TCTNB.ZXZ
-
-
-ifdef CONFIG_TCT_8909_PIXI384G
-obj-$(CONFIG_SENSORS_BMA2X2_TCT)       += bma2x2_tct/
-obj-$(CONFIG_SENSORS_HALL)              += hall/
 endif

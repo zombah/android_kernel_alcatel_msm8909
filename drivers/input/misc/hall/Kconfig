@@ -1,4 +1,0 @@
-config SENSORS_HALL
-    bool "Hall Sensor"
-    help
-      Say Y here to enable support for the hall sensor

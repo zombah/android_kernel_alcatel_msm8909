@@ -786,16 +786,16 @@ config SENSORS_AKM8963
 	  To compile this driver as a module, choose M here: the
 	  module will be called akm8963.
 
-# config SENSORS_STK3X1X
-#	tristate "STK3X1X device driver"
-#	depends on I2C
-#	default n
-#	help
-#	  Say Y here you want to enable for the sitronix stk3x1x
-#	  light and proximity sensors driver.
-#
-#	  To compile this driver as a module, choose M here: the
-#	  module will be called stk3x1x.
+config SENSORS_STK3X1X
+	tristate "STK3X1X device driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here you want to enable for the sitronix stk3x1x
+	  light and proximity sensors driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called stk3x1x.
 
 config SENSORS_CAPELLA_CM36283
 	tristate "CM36283 proximity and light sensor"
@@ -851,30 +851,6 @@ config SENSORS_CAPELLA_CM36283
 #	 sensor driver of BMI058.
 
 source "drivers/input/misc/pixi35/Kconfig"
-
-source "drivers/input/misc/pixi355/Kconfig"
-
-# + Cedar.Tan add for product pixi355_tmo,20150521
-source "drivers/input/misc/pixi355_tmo/Kconfig"
-# - Cedar.Tan add for product pixi355_tmo,20150521
-
-# + yijun.chen add for product pixi445_tf,20150720
-source "drivers/input/misc/pixi445_tf/Kconfig"
-# - yijun.chen add for product pixi445_tf,20150720
-
-#[PLATFORM]-Add-BEGIN by TCTNB.ZXZ, RR-876380, 2015/01/03, add stk3311 sensor for pop3
-source "drivers/input/misc/stk3x1x_tct/Kconfig"
-#[PLATFORM]-Add-END by TCTNB.ZXZ
-#[PLATFORM]-Add by TCTNB.ZXZ, RR-966458, 2015/04/02, add KXTJ2-1009 Gsensor
-source "drivers/input/misc/kxtj9_tct/Kconfig"
-#[PLATFORM]-Add-END by TCTNB.ZXZ
-#[PLATFORM]-Add-BEGIN by TCTNB.ZXZ, RR-876617, 2015/01/04, add BMA223 sensor for pop3
-source "drivers/input/misc/bma2x2_tct/Kconfig"
-#[PLATFORM]-Add-END by TCTNB.ZXZ
-
-#[PLATFORM]-Add-BEGIN by TCTNB.ZXZ, FR-966665, 2015/04/27, add ADUX1050 sensor
-source "drivers/input/misc/audx1050/Kconfig"
-#[PLATFORM]-Add-END by TCTNB.ZXZ
 
 endif
 
