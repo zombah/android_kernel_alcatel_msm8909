@@ -75,11 +75,6 @@ obj-$(CONFIG_TOUCHSCREEN_WM97XX_MAINSTONE)	+= mainstone-wm97xx.o
 obj-$(CONFIG_TOUCHSCREEN_WM97XX_ZYLONITE)	+= zylonite-wm97xx.o
 obj-$(CONFIG_TOUCHSCREEN_W90X900)	+= w90p910_ts.o
 obj-$(CONFIG_TOUCHSCREEN_TPS6507X)	+= tps6507x-ts.o
-# modify(add) by bin.su.nb for [TP driver development (1st source)] with PR876205 begin . 20150103
-ifdef CONFIG_TCT_8909_POP3
-obj-$(CONFIG_TOUCHSCREEN_FT5436)	+= tp_FT5436/
-endif
-# modify(add) by bin.su.nb for [TP driver development (1st source)] with PR876205 end
 obj-$(CONFIG_TOUCHSCREEN_MSTAR21XX)	+= msg21xx_ts.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI4_DEV)	+= synaptics_rmi_dev.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE) 	+= synaptics_fw_update.o
@@ -94,42 +89,3 @@ obj-$(CONFIG_INPUT_TOUCHSCREEN)       += pixi35/
 obj-$(CONFIG_INPUT_TOUCHSCREEN)       += msg2238_pixi35/
 # add by mike.li for 2st src msg2238 end. [PRxxxx][2015.03.06]
 endif
-
-ifdef CONFIG_TCT_8909_PIXI355
-#Add by Luoxingxing for gt9157 -START- [2015.04.17]
-obj-$(CONFIG_INPUT_TOUCHSCREEN)       += gt9157_pixi355/
-obj-$(CONFIG_INPUT_TOUCHSCREEN)       += s2333_pixi355/
-#Add by Luoxingxing for gt9157 -END- [2015.04.17]
-endif
-
-# liyifan start, add TMO Micro CTP driver control,20150520
-ifdef CONFIG_TCT_8909_PIXI355_TMO
-obj-$(CONFIG_INPUT_TOUCHSCREEN)       += gt9157_pixi355/
-endif
-# liyifan end, add TMO Micro CTP control
-
-#add by ke.li for pixi445_tf ft6336
-ifdef CONFIG_TCT_8909_PIXI445_TF
-#obj-$(CONFIG_FT6336_TOUCHPANEL)        += ft6336_pixi445_tf/
-obj-$(CONFIG_INPUT_TOUCHSCREEN)        += msg2238_pixi445_tf/
-endif
-#add by ke.li end
-
-# modify(add) by wei.qiu for [TP driver development] with FR966443 begin . 20150402
-# modify(add) by bin.su for [TP  2nd TP driver development ] with FR1013959 begin . 20150605
-ifdef CONFIG_TCT_8909_PIXI37
-obj-$(CONFIG_TOUCHSCREEN_GT912)		+= gt912_pixi3_7_global/
-obj-$(CONFIG_GSL_TOUCHPANEL_DRIVER)	+= gslX68X_pixi3_7_global/
-else
-ifdef CONFIG_TCT_8909_PIXI384G
-obj-$(CONFIG_TOUCHSCREEN_GT912)		+= gt912_pixi3_8_global/
-else
-obj-$(CONFIG_TOUCHSCREEN_GT9XX)		+= gt9xx/
-endif
-endif
-#modify(add) end.
-# modify(add) by wei.qiu for [TP driver development] with FR966443 end . 20150402
-
-
-
-

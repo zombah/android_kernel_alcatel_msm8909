@@ -939,10 +939,6 @@ config TOUCHSCREEN_TPS6507X
 
 source "drivers/input/touchscreen/pixi35/Kconfig"
 
-#modify(add) by bin.su.nb for [TP driver development (1st source)] with PR876205 begin . 20150103*/
-source "drivers/input/touchscreen/tp_FT5436/Kconfig"
-#modify(add) by bin.su.nb for [TP driver development (1st source)] with PR876205 end*/
-
 config TOUCHSCREEN_FT5X06_PSENSOR
        tristate "FocalTech proximity feature support"
        depends on TOUCHSCREEN_FT5X06 && SENSORS
@@ -1046,35 +1042,6 @@ config TOUCHSCREEN_GT9XX
 
 source "drivers/input/touchscreen/gt9xx/Kconfig"
 
-# modify(add) by wei.qiu for [TP driver development] with FR966443 begin . 20150402
-config TOUCHSCREEN_GT912
-	bool "Goodix touchpanel GT912 series"
-	depends on I2C
-	help
-	  Say Y here if you have a Goodix GT912 touchscreen.
-	  Gt912 controllers are multi touch controllers which can
-	  report 5 touches at a time.
-
-          If unsure, say N.
-
-source "drivers/input/touchscreen/gt912_pixi3_7_global/Kconfig"
-# modify(add) by wei.qiu for [TP driver development] with FR966443 end . 20150402
-# modify(add) by bin.su for [TP  2nd TP driver development ] with FR1013959 begin . 20150605
-config GSL_TOUCHPANEL_DRIVER
-	bool "GSL touchpanel gslX68X series"
-	depends on I2C
-	help
-	  Say Y here if you have a Goodix gslX68X touchscreen.
-	  gslX68X controllers are multi touch controllers which can
-	  report 5 touches at a time.
-
-          If unsure, say N.
-
-source "drivers/input/touchscreen/gslX68X_pixi3_7_global/Kconfig"
-# modify(add) end
-#Add by falin.luo for TP driver begin 20150521
-source "drivers/input/touchscreen/gt912_pixi3_8_global/Kconfig"
-#Add by falin.luo for TP driver end 20150521
 config TOUCHSCREEN_BU21150
 	tristate "JDI AFE BU21150"
 	depends on SPI_MASTER
@@ -1096,38 +1063,9 @@ config INPUT_MT_WRAPPER
 	  Say Y here if you want to enable the driver.
 
 	  If unsure, say N.
-#add by ke.li ft6336 begin
-config JRD_BUTTON_TP
-	bool "FocalTech FT6336 touchpanel driver"
-	depends on I2C
-	default y
-	help
-	  Say Y here if you have a FocalTech FT6336 touchscreen.
-	  ft6336 controllers are multi touch controllers which can
-	  report some touches at a time.
 
-          If unsure, say N.
-source "drivers/input/touchscreen/ft6336_pixi445_tf/Kconfig"
-
-config FT6336_TOUCHPANEL
-       tristate "FocalTech Touchpanel support"
-       help
-         Say Y here if you want to support ft6336
-         feature.
-#add by ke.li ft6336 end
-#add by ke.li msg2238_pixi445_tf start
-source "drivers/input/touchscreen/msg2238_pixi445_tf/Kconfig"
-#add by ke.li msg2238_pixi445_tf end
 #[PLATFORM]-Add-BEGIN by mike.li for msg2238 driver code.[2015.03.06]
 source "drivers/input/touchscreen/msg2238_pixi35/Kconfig"
-#[PLATFORM]-Add-END by mike.li
-
-#[PLATFORM]Add by Luoxingxing for gt9157 driver for pixi3-55 -START-[2015.04.17]
-source "drivers/input/touchscreen/gt9157_pixi355/Kconfig"
-#[PLATFORM]Add by Luoxingxing -END-[2015.04.17]
-
-#[PLATFORM]-Add-BEGIN by mike.li for s2333 driver code for pixi3-55.[2015.05.21]
-source "drivers/input/touchscreen/s2333_pixi355/Kconfig"
 #[PLATFORM]-Add-END by mike.li
 
 endif
