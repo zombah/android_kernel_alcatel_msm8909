@@ -227,42 +227,6 @@ ifdef CONFIG_TCT_8909_PIXI35
 subdir- := pixi35
 endif
 
-ifdef CONFIG_TCT_8909_PIXI37
-subdir- := pixi37
-endif
-
-ifdef CONFIG_TCT_8909_POP3
-subdir- := pop3
-endif
-
-ifdef CONFIG_TCT_8909_PIXI355
-subdir- := pixi355
-endif
-
-ifdef CONFIG_TCT_8909_PIXI355_TMO
-subdir- := pixi355_tmo
-endif
-
-ifdef CONFIG_TCT_8909_PIXI355_TF
-subdir- := pixi355_tf
-endif
-
-ifdef CONFIG_TCT_8909_PIXI355_CRICKET
-subdir- := pixi355_cricket
-endif
-
-ifdef CONFIG_TCT_8909_PIXI455_GEOPHONE
-subdir- := pixi455_geophone
-endif
-
-ifdef CONFIG_TCT_8909_PIXI384G
-subdir- := pixi384g
-endif
-
-ifdef CONFIG_TCT_8909_PIXI445_TF
-subdir- := pixi445_tf
-endif
-
 endif
 
 # *.dtb used to be generated in the directory above. Clean out the
