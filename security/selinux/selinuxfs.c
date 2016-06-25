@@ -168,11 +168,9 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 		goto out;
 
 	if (new_value != selinux_enforcing) {
-#ifndef JRD_USER2ROOT
 		length = task_has_security(current, SECURITY__SETENFORCE);
 		if (length)
 			goto out;
-#endif
 		audit_log(current->audit_context, GFP_KERNEL, AUDIT_MAC_STATUS,
 			"enforcing=%d old_enforcing=%d auid=%u ses=%u",
 			new_value, selinux_enforcing,

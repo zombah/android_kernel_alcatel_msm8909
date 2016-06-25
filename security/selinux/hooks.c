@@ -103,12 +103,10 @@ extern struct security_operations *security_ops;
 
 /* SECMARK reference count */
 static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
-//modify begin by stephen.wu for recovery permissive mode
+
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
-int selinux_enforcing = 0;
-#else
-int selinux_enforcing = 1;
-#endif
+int selinux_enforcing;
+
 static int __init enforcing_setup(char *str)
 {
 	unsigned long enforcing;
@@ -117,8 +115,8 @@ static int __init enforcing_setup(char *str)
 	return 1;
 }
 __setup("enforcing=", enforcing_setup);
-//#endif
-//modify end by stephen.wu
+#endif
+
 #ifdef CONFIG_SECURITY_SELINUX_BOOTPARAM
 int selinux_enabled = CONFIG_SECURITY_SELINUX_BOOTPARAM_VALUE;
 

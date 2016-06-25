@@ -15,13 +15,6 @@ selinux-$(CONFIG_NETLABEL) += netlabel.o
 
 ccflags-y := -Isecurity/selinux -Isecurity/selinux/include
 
-#add begin by stephen.wu for debug support
-ifeq ($(TCT_DEBUG_SUPPORT), true)
-KBUILD_CFLAGS += -DJRD_USER2ROOT
-$(warning "selinux kernel debug")
-endif
-#add end by stephen.wu
-
 $(addprefix $(obj)/,$(selinux-y)): $(obj)/flask.h
 
 quiet_cmd_flask = GEN     $(obj)/flask.h $(obj)/av_permissions.h
