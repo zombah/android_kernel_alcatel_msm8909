@@ -4,15 +4,7 @@ dtb-$(CONFIG_ARCH_XGENE) += apm-mustang.dtb
 targets += dtbs
 
 #used for cleaning - not building
-ifndef CONFIG_TCT_8909_COMMON
 subdir- := qcom
-endif
-ifdef CONFIG_TCT_8909_PIXI35
-subdir- := pixi35
-endif
-ifdef CONFIG_TCT_8909_POP3
-subdir- := pop3
-endif
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)

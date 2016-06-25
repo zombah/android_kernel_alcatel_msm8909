@@ -73,21 +73,7 @@ zinstall install: vmlinux
 
 dtbs: scripts
 	$(Q)$(MAKE) $(build)=$(boot)/dts dtbs
-ifndef CONFIG_TCT_8909_COMMON
 	$(Q)$(MAKE) $(build)=$(boot)/dts/qcom dtbs
-endif
-ifdef CONFIG_TCT_8909_PIXI35
-	$(Q)$(MAKE) $(build)=$(boot)/dts/pixi35 dtbs
-endif
-ifdef CONFIG_TCT_8909_PIXI355_TMO
-	$(Q)$(MAKE) $(build)=$(boot)/dts/pixi355_tmo dtbs
-endif
-ifdef CONFIG_TCT_8909_POP3
-	$(Q)$(MAKE) $(build)=$(boot)/dts/pop3 dtbs
-endif
-ifdef CONFIG_TCT_8909_PIXI37
-	$(Q)$(MAKE) $(build)=$(boot)/dts/pixi37 dtbs
-endif
 
 PHONY += vdso_install
 vdso_install:

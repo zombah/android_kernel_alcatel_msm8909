@@ -607,23 +607,6 @@ config SYSVIPC_COMPAT
 	def_bool y
 	depends on COMPAT && SYSVIPC
 
-config TCT_8909_POP3
-	deoebds on ARCH_MSM8909
-	bool "MSM8909 POP3"
-	help
-	Support for the TCT POP3 device
-
-config TCT_8909_PIXI35
-	deoebds on ARCH_MSM8909
-	bool "MSM8909 PIXI35"
-	help
-	Support for the TCT PIXI35 device
-
-config TCT_8909_PIXI355_TMO
-	deoebds on ARCH_MSM8909
-	bool "MSM8909 PIXI355_TMO"
-	help
-	Support for the TCT PIXI355_TMO device
 endmenu
 
 menu "Power management options"
