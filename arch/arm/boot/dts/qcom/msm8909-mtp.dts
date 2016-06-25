@@ -20,5 +20,5 @@
 / {
 	model = "Qualcomm Technologies, Inc. MSM8909-PM8909 MTP";
 	compatible = "qcom,msm8909-mtp", "qcom,msm8909", "qcom,mtp";
-	qcom,board-id= <8 0x1000>;
+	qcom,board-id= <8 0x100>;
 };
