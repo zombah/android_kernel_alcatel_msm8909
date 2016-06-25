@@ -385,9 +385,6 @@ KBUILD_AFLAGS_MODULE  := -DMODULE
 KBUILD_CFLAGS_MODULE  := -DMODULE
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
-ifeq ($(TARGET_BUILD_MMITEST), true)
-KBUILD_CFLAGS += -DFEATURE_TCTNB_MMITEST
-endif
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
 KERNELRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
 KERNELVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
@@ -397,14 +394,6 @@ export ARCH SRCARCH CONFIG_SHELL HOSTCC HOSTCFLAGS CROSS_COMPILE AS LD CC
 export CPP AR NM STRIP OBJCOPY OBJDUMP
 export MAKE AWK GENKSYMS INSTALLKERNEL PERL UTS_MACHINE
 export HOSTCXX HOSTCXXFLAGS LDFLAGS_MODULE CHECK CHECKFLAGS
-
-#add by wangping for build varant begin
-ifeq ($(TARGET_BUILD_VARIANT),user)
-     CFLAGS_KERNEL += -DBUILD_USER_VERSION
-else 
-     CFLAGS_KERNEL += -DBUILD_ENG_VERSION
-endif
-#add end
 
 export KBUILD_CPPFLAGS NOSTDINC_FLAGS LINUXINCLUDE OBJCOPYFLAGS LDFLAGS
 export KBUILD_CFLAGS CFLAGS_KERNEL CFLAGS_MODULE CFLAGS_GCOV
@@ -427,11 +416,6 @@ export RCS_TAR_IGNORE := --exclude SCCS --exclude BitKeeper --exclude .svn \
 
 # ===========================================================================
 # Rules shared between *config targets and build targets
-
-ifeq ($(TARGET_BUILD_MMITEST), true)
-KBUILD_CFLAGS += -DTARGET_BUILD_MMITEST
-KBUILD_CPPFLAGS += -DTARGET_BUILD_MMITEST
-endif
 
 # Basic helpers built in scripts/
 PHONY += scripts_basic
