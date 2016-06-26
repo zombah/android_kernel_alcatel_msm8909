@@ -495,7 +495,7 @@ int msm_camera_config_single_vreg(struct device *dev,
 	}
 	if (cam_vreg->type == VREG_TYPE_CUSTOM) {
 		if (cam_vreg->custom_vreg_name == NULL) {
-			pr_err("%s : can't find sub reg name",
+			pr_err("%s : can't find sub reg name\n",
 				__func__);
 			goto vreg_get_fail;
 		}

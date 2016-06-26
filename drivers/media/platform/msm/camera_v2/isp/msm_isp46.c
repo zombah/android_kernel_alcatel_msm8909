@@ -468,6 +468,7 @@ static void msm_vfe46_process_reg_update(struct vfe_device *vfe_dev,
 
 	if (irq_status0 & BIT(4)) {
 		msm_isp_notify(vfe_dev, ISP_EVENT_REG_UPDATE, VFE_PIX_0, ts);
+		//msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
 		input_src |= (1 << VFE_PIX_0);
 	}
 	if (irq_status0 & BIT(5)) {

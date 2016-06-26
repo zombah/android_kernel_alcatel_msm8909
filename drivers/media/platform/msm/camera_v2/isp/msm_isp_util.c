@@ -751,6 +751,8 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 				*((enum msm_vfe_input_src *)arg);
 			vfe_dev->hw_info->vfe_ops.core_ops.
 				reg_update(vfe_dev, (1 << frame_src));
+			vfe_dev->axi_data.src_info[frame_src].last_updt_frm_id =
+			  vfe_dev->axi_data.src_info[frame_src].frame_id;
 		}
 		break;
 	case VIDIOC_MSM_ISP_SET_SRC_STATE:
@@ -1103,11 +1105,9 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	case VFE_HW_UPDATE_LOCK: {
 		uint32_t update_id =
 			vfe_dev->axi_data.src_info[VFE_PIX_0].last_updt_frm_id;
-		if (vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id != *cfg_data
-			|| update_id == *cfg_data) {
-			ISP_DBG("%s hw update lock failed acq %d, cur id %u, last id %u\n",
+		if (update_id) {
+			ISP_DBG("%s hw update lock failed cur id %u, last id %u\n",
 				__func__,
-				*cfg_data,
 				vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id,
 				update_id);
 			return -EINVAL;
@@ -1840,6 +1840,9 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	vfe_dev->taskletq_idx = 0;
 	vfe_dev->vt_enable = 0;
 	vfe_dev->bus_util_factor = 0;
+	vfe_dev->fullsize_stats = 0;
+	vfe_dev->stats_hnum = 0;
+	vfe_dev->stats_vnum = 0;
 	rc = of_property_read_u32(vfe_dev->pdev->dev.of_node,
 			"bus-util-factor", &vfe_dev->bus_util_factor);
 	if (rc < 0)

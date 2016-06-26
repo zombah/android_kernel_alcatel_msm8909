@@ -452,7 +452,10 @@ struct msm_isp_buf_event {
 };
 struct msm_isp_stats_event {
 	uint32_t stats_mask;                        /* 4 bytes */
+	uint32_t hnum;
+	uint32_t vnum;
 	uint8_t stats_buf_idxs[MSM_ISP_STATS_MAX];  /* 11 bytes */
+	uint8_t is_full_size_stats;
 };
 
 struct msm_isp_stream_ack {
