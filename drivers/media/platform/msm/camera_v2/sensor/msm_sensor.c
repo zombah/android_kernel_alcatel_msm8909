@@ -20,7 +20,14 @@
 
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
+#define TCT_SENSOR_OTP_OPEN 1
+#if TCT_SENSOR_OTP_OPEN
+#include "ov5670_pixi35_v4l2_tct_OTP.h"
+#include "s5k5e2_pixi35_v4l2_tct_OTP.h"
+#include "s5k4h5yc_pixi35_v4l2_tct_OTP.h"
+#include "ov8858_pixi35_v4l2_tct_OTP.h"
 
+#endif
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
 static void msm_sensor_adjust_mclk(struct msm_camera_power_ctrl_t *ctrl)
 {
@@ -485,10 +492,208 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	return rc;
 }
 
+uint16_t msm_sensor_read_moudule_id_PC0FQ0009A(struct msm_sensor_ctrl_t *s_ctrl)
+{
+	uint16_t rc = 0;
+	uint16_t module_id = 0;
+	uint16_t temp1 = 0, otp_flag = 0, addr = 0;
+	struct msm_camera_i2c_client *sensor_i2c_client;
+	sensor_i2c_client = s_ctrl->sensor_i2c_client;
+//stream on
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x0100, 0x01, MSM_CAMERA_I2C_BYTE_DATA);
+	mdelay(20);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, 0x5002, &temp1, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x5002,(0x00 & 0x08) | (temp1 & (~0x08)), MSM_CAMERA_I2C_BYTE_DATA);
+// read OTP into buffer
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d84, 0xC0, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d88, 0x70, MSM_CAMERA_I2C_BYTE_DATA);// OTP start address
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d89, 0x10, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d8A, 0x70, MSM_CAMERA_I2C_BYTE_DATA);// OTP end address
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d8B, 0x41, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d81, 0x01, MSM_CAMERA_I2C_BYTE_DATA);// load otp into buffer
+	mdelay(5);
+// OTP into
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, 0x7010, &otp_flag, MSM_CAMERA_I2C_BYTE_DATA);
+	if((otp_flag & 0xc0) == 0x40) {
+      addr = 0x7011; // base address of info group 1
+   } else if((otp_flag & 0x30) == 0x10) {
+      addr = 0x7018; // base address of info group 2
+   }else if((otp_flag & 0x0c) == 0x04) {
+      addr = 0x701f; // base address of info group 3
+   }
+//read module_id
+#if 0
+	for(temp1 = 0x7010; temp1 < 0x7041; temp1 ++){
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, temp1, &module_id, MSM_CAMERA_I2C_BYTE_DATA);
+		pr_err("[stars]%s: 0x%x=0x%x, rc=%d\n", __func__, temp1, module_id, rc);
+	}
+#endif
+	pr_err("%s: addr=0x%x, rc=%d\n", __func__, addr, rc);
+
+	module_id = 0;
+
+	if(addr != 0){
+		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr, &module_id, MSM_CAMERA_I2C_BYTE_DATA);
+	}else{
+		module_id = 0;
+	}
+
+//stream off
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x0100, 0x00, MSM_CAMERA_I2C_BYTE_DATA);
+
+	if(rc < 0)
+		return rc;
+
+	return module_id;
+}
+
+uint16_t msm_sensor_read_moudule_id_OX5845100(struct msm_sensor_ctrl_t *s_ctrl)
+{
+	uint16_t rc = 0;
+	uint16_t module_id = 0;
+	uint16_t temp1 = 0, otp_flag = 0, addr = 0;
+	struct msm_camera_i2c_client *sensor_i2c_client;
+	sensor_i2c_client = s_ctrl->sensor_i2c_client;
+//stream on
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x0100, 0x01, MSM_CAMERA_I2C_BYTE_DATA);
+	mdelay(20);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, 0x5002, &temp1, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x5002,(0x00 & 0x08) | (temp1 & (~0x08)), MSM_CAMERA_I2C_BYTE_DATA);
+// read OTP into buffer
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d84, 0xC0, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d88, 0x70, MSM_CAMERA_I2C_BYTE_DATA);// OTP start address
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d89, 0x10, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d8A, 0x70, MSM_CAMERA_I2C_BYTE_DATA);// OTP end address
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d8B, 0x41, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d81, 0x01, MSM_CAMERA_I2C_BYTE_DATA);// load otp into buffer
+	mdelay(5);
+// OTP into
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, 0x7010, &otp_flag, MSM_CAMERA_I2C_BYTE_DATA);
+	if((otp_flag & 0xc0) == 0x40) {
+      addr = 0x7011; // base address of info group 1
+   } else if((otp_flag & 0x30) == 0x10) {
+      addr = 0x7018; // base address of info group 2
+   }else if((otp_flag & 0x0c) == 0x04) {
+      addr = 0x701f; // base address of info group 3
+   }
+//read module_id
+#if 0
+	for(temp1 = 0x7010; temp1 < 0x7041; temp1 ++){
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, temp1, &module_id, MSM_CAMERA_I2C_BYTE_DATA);
+		pr_err("[stars]%s: 0x%x=0x%x, rc=%d\n", __func__, temp1, module_id, rc);
+	}
+#endif
+	pr_err("%s: addr=0x%x, rc=%d\n", __func__, addr, rc);
+
+	module_id = 0;
+
+	if(addr != 0){
+		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr, &module_id, MSM_CAMERA_I2C_BYTE_DATA);
+	}else{
+		module_id = 0;
+	}
+
+//stream off
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x0100, 0x00, MSM_CAMERA_I2C_BYTE_DATA);
+
+	if(rc < 0)
+		return rc;
+
+	return module_id;
+}
+
+uint16_t msm_sensor_chk_0339_id(struct msm_sensor_ctrl_t *s_ctrl, int cam_id)
+{
+	if (!strcmp(s_ctrl->sensordata->sensor_name, "gc0339_pixo_7s")
+			&& cam_id == 1) {
+		pr_err("gc0339_pixo_7s id check OK\n");
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "gc0339_pixo_7s_2nd")
+			&& cam_id == 0) {
+		pr_err("gc0339_pixo_7s_2nd id check OK\n");
+	} else {
+		pr_err("gc0339 id check FAIL!!\n");
+		return -1;
+	}
+	return 0;
+}
+
+uint16_t msm_sensor_read_moudule_info_ov5670_csp(struct msm_sensor_ctrl_t *s_ctrl)
+{
+	uint16_t rc = 0;
+	uint16_t module_id = 0,vcm_id=255,driver_ic=255,module_info=17;
+	uint16_t temp1 = 0, otp_flag = 0, addr = 0;
+	struct msm_camera_i2c_client *sensor_i2c_client;
+	sensor_i2c_client = s_ctrl->sensor_i2c_client;
+//stream on
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x0100, 0x01, MSM_CAMERA_I2C_BYTE_DATA);
+	mdelay(20);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, 0x5002, &temp1, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x5002,(0x00 & 0x08) | (temp1 & (~0x08)), MSM_CAMERA_I2C_BYTE_DATA);
+// read OTP into buffer
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d84, 0xC0, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d88, 0x70, MSM_CAMERA_I2C_BYTE_DATA);// OTP start address
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d89, 0x10, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d8A, 0x70, MSM_CAMERA_I2C_BYTE_DATA);// OTP end address
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d8B, 0x25, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x3d81, 0x01, MSM_CAMERA_I2C_BYTE_DATA);// load otp into buffer
+	mdelay(5);
+// OTP into
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, 0x7010, &otp_flag, MSM_CAMERA_I2C_BYTE_DATA);
+	if((otp_flag & 0xc0) == 0x40) {
+      addr = 0x7011; // base address of info group 1
+   } else if((otp_flag & 0x30) == 0x10) {
+      addr = 0x7018; // base address of info group 2
+   }else if((otp_flag & 0x0c) == 0x04) {
+      addr = 0x701f; // base address of info group 3
+   }
+//read module_id
+	pr_err("%s: addr=0x%x, rc=%d\n", __func__, addr, rc);
+	
+	if(addr != 0){
+		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr, &module_id, MSM_CAMERA_I2C_BYTE_DATA);
+		//pr_err("%s: module_id=0x%x, rc=%d\n", __func__, module_id, rc);
+		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr+2, &vcm_id, MSM_CAMERA_I2C_BYTE_DATA);
+		//pr_err("%s: vcm_id=0x%x, rc=%d\n", __func__, vcm_id, rc);
+		rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, addr+3, &driver_ic, MSM_CAMERA_I2C_BYTE_DATA);
+		//pr_err("%s: driver_ic=0x%x, rc=%d\n", __func__, driver_ic, rc);
+	}else{
+		module_id = 0;
+		vcm_id=255;
+		driver_ic=255;
+	}
+
+//stream off
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x0100, 0x00, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, 0x5002, &temp1, MSM_CAMERA_I2C_BYTE_DATA);
+	rc |= sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client, 0x5002,(0x08 & 0x08) | (temp1 & (~0x08)), MSM_CAMERA_I2C_BYTE_DATA);
+	if(rc < 0)
+		return rc;
+//check module_info
+	if(module_id==0x44)
+	{
+	  module_info &=0x0f;
+	}else if(module_id==0x0c)
+	{
+	  module_info |=0xf0;
+	}else{
+	  module_info=0x11;
+	}
+
+	if((vcm_id !=0)||(driver_ic !=0))
+	{
+	  module_info &=0xf0;
+	}else{
+	  module_info |=0x0f;
+	}
+	
+	return module_info;
+}
+
 int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	int rc = 0;
 	uint16_t chipid = 0;
+	uint16_t module_id=0,module_info = 17;
 	struct msm_camera_i2c_client *sensor_i2c_client;
 	struct msm_camera_slave_info *slave_info;
 	const char *sensor_name;
@@ -509,20 +714,117 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		return -EINVAL;
 	}
 
-	rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
-		sensor_i2c_client, slave_info->sensor_id_reg_addr,
-		&chipid, MSM_CAMERA_I2C_WORD_DATA);
+	if (slave_info->sensor_id == 0xc8)
+	{
+  		sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client,0xfc,0x10,MSM_CAMERA_I2C_BYTE_DATA);
+  		sensor_i2c_client->i2c_func_tbl->i2c_write(sensor_i2c_client,0xfc,0x10,MSM_CAMERA_I2C_BYTE_DATA);
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, slave_info->sensor_id_reg_addr,&chipid, MSM_CAMERA_I2C_BYTE_DATA);
+		printk("our 0339 id is %x\n",chipid);
+		printk("our 0339 address is %x\n",slave_info->sensor_id_reg_addr);
+	}
+	else
+	{
+		rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
+			sensor_i2c_client, slave_info->sensor_id_reg_addr,
+			&chipid, MSM_CAMERA_I2C_WORD_DATA);
+	}
 	if (rc < 0) {
 		pr_err("%s: %s: read id failed\n", __func__, sensor_name);
 		return rc;
 	}
+//start for ov5670csp module compatibility
+/*
+	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_pixi355")){
+		module_id = msm_sensor_read_moudule_id_ov5670_csp(s_ctrl);
+		pr_err("%s: %s: module_id=0x%x,rc=%d\n", __func__, sensor_name,module_id,rc);
+		#ifdef  MINI_TEST_NO_OTP
+	 	if(module_id != 0x44)
+			{
+			return -22;
+	         	}
+		#else
+	 	if((module_id != 0x44)&&(module_id != 0)&&(module_id == 0x0c))//modify for null otp
+			{
+			return -22;
+			}
+		#endif
+	}
+	
+	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_sunrise_pixi355")){
+		module_id = msm_sensor_read_moudule_id_ov5670_csp(s_ctrl);
+		pr_err("%s: %s: module_id=0x%x,rc=%d\n", __func__, sensor_name,module_id,rc);
+		if(module_id != 0x0c)
+			return -22;
+	}
+*/
+	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b")){
+		module_info = msm_sensor_read_moudule_info_ov5670_csp(s_ctrl);
+		pr_err("%s: %s: module_info=0x%x,rc=%d\n", __func__, sensor_name,module_info,rc);
+	 	if(module_info!= 0x00)
+			{
+			return -22;
+	         	}
+	}
 
-	CDBG("%s: read id: 0x%x expected id 0x%x:\n", __func__, chipid,
+	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_ff")){
+		module_info = msm_sensor_read_moudule_info_ov5670_csp(s_ctrl);
+		pr_err("%s: %s: module_info=0x%x,rc=%d\n", __func__, sensor_name,module_info,rc);
+		if((module_info != 0x0f)&&(module_info != 0xff))
+			{
+			return -22;
+			}
+	}
+
+	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_sunrise")){
+		module_info = msm_sensor_read_moudule_info_ov5670_csp(s_ctrl);
+		pr_err("%s: %s: module_info=0x%x,rc=%d\n", __func__, sensor_name,module_info,rc);
+		if(module_info != 0xf0)
+			{
+			return -22;
+			}
+	}
+//endif
+	/*sub camera check id mechanism added 201508*/
+	if (CAMERA_1 == s_ctrl->id) {
+		int sub_camera_gpio_nb = of_get_gpio(s_ctrl->of_node, 4);
+		int sub_cam_id_stat = -1;
+		int rt = 0;
+		pr_err("%s sub_camera_gpio_nb is %d \n", __func__, sub_camera_gpio_nb);
+		if (sub_camera_gpio_nb > 0) {
+			sub_cam_id_stat = gpio_get_value_cansleep(sub_camera_gpio_nb);
+			pr_err("%s sub_cam_id_stat is %d \n", __func__, sub_cam_id_stat);
+			if (slave_info->sensor_id == 0xc8) {
+				rt = msm_sensor_chk_0339_id(s_ctrl, sub_cam_id_stat);
+				if (rt) {
+					pr_err("msm_sensor_match_id chip id doesnot match\n");
+					return -ENODEV;
+				}
+			}
+		} else {
+			pr_err("%s error sub_camera_gpio_number %d \n", __func__, sub_camera_gpio_nb);
+		}
+	}
+
+	pr_err("%s: read id: 0x%x expected id 0x%x:\n", __func__, chipid,
 		slave_info->sensor_id);
 	if (chipid != slave_info->sensor_id) {
 		pr_err("msm_sensor_match_id chip id doesnot match\n");
 		return -ENODEV;
 	}
+
+	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_pixi3_8_4g")){
+		module_id = msm_sensor_read_moudule_id_PC0FQ0009A(s_ctrl);
+		pr_err("%s: %s: read module_id = 0x%x, expected 0x0c, rc=%d\n", __func__, sensor_name, module_id, rc);
+		if(module_id != 0x0c)
+			return -EINVAL;
+	}
+	if(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670csp_pixi3_8_4g")){
+		module_id = msm_sensor_read_moudule_id_OX5845100(s_ctrl);
+		pr_err("%s: %s: read module_id = 0x%x, expected 0x44, rc=%d\n", __func__, sensor_name, module_id, rc);
+		if(module_id != 0x44)
+			return -EINVAL;
+	}
+
 	return rc;
 }
 
@@ -554,6 +856,65 @@ static int msm_sensor_get_af_status(struct msm_sensor_ctrl_t *s_ctrl,
 	return 0;
 }
 
+static int TCT_update_OTP(struct msm_sensor_ctrl_t *s_ctrl)
+{
+
+    mutex_lock(s_ctrl->msm_sensor_mutex);
+
+	printk("OTP: sensor name: %s\n",s_ctrl->sensordata->sensor_name);
+
+	if ((!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_qc700"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_qc700_pixi355")))
+	{
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb(s_ctrl->sensor_i2c_client);
+	} else if ((!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_pixi355"))){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb_ewelly(s_ctrl->sensor_i2c_client);
+	}  else if ((!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_sunrise"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_sunrise_pixi355"))){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb_Sunrise(s_ctrl->sensor_i2c_client);
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_8909")){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb_ffqt(s_ctrl->sensor_i2c_client);
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_q5v41b_ff")){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb_ff(s_ctrl->sensor_i2c_client);
+	}else if (!strcmp(s_ctrl->sensordata->sensor_name, "s5k5e2_8909")){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+            s5k5e2_pixi35_otp_read_update_wb(s_ctrl);
+	} else if ((!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_8909"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_8909_pixi355"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_q8v19w"))||(!strcmp(s_ctrl->sensordata->sensor_name, "ov8858_q8v19w_pixi355"))){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			ov8858_update_otp_wb(s_ctrl->sensor_i2c_client);
+            ov8858_update_otp_lenc(s_ctrl->sensor_i2c_client);
+			//ov8858_read_otp(s_ctrl->sensor_i2c_client);
+	}
+	else if ((!strcmp(s_ctrl->sensordata->sensor_name, "s5k4h5yc_truly_cm9934"))||(!strcmp(s_ctrl->sensordata->sensor_name, "s5k4h5yc_truly"))
+		||(!strcmp(s_ctrl->sensordata->sensor_name, "s5k4h5yc_truly_cm9934_pixi355"))||(!strcmp(s_ctrl->sensordata->sensor_name, "s5k4h5yc_truly_pixi355"))){
+			S5K4H5YC_PIXI35_TCT_OTP_calibration(s_ctrl->sensor_i2c_client);
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "s5k5e2_pixi3_7_spr")||
+			!strcmp(s_ctrl->sensordata->sensor_name, "s5k5e2_pixi3_7_gl")){
+		printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+		S5K5E2_PIXI3_7_CMCC_TCT_OTP_calibration(s_ctrl->sensor_i2c_client);
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_pixo_7s")){
+		printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+		update_otp_wb_pix7(s_ctrl->sensor_i2c_client);
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_pixi445tf")){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb_pixi445(s_ctrl->sensor_i2c_client);
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670_pixi3_8_4g")){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb_pixi38(s_ctrl->sensor_i2c_client);
+	} else if (!strcmp(s_ctrl->sensordata->sensor_name, "ov5670csp_pixi3_8_4g")){
+			printk("OTP: %s update\n",s_ctrl->sensordata->sensor_name);
+			update_otp_wb_pixi38_csp(s_ctrl->sensor_i2c_client);
+	}else {
+		printk("OTP: it should be make some mistakes: %d\n", __LINE__);
+    }
+    mutex_unlock(s_ctrl->msm_sensor_mutex);
+	return 0;
+}
+
+
 static long msm_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 			unsigned int cmd, void *arg)
 {
@@ -581,6 +942,12 @@ static long msm_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 		return 0;
 	case MSM_SD_NOTIFY_FREEZE:
 		return 0;
+	case VIDIOC_MSM_SENSOR_GET_OTP_STATUS:
+#if	TCT_SENSOR_OTP_OPEN
+		printk("%s cmd =%d \n",__func__,cmd);
+		TCT_update_OTP(s_ctrl);
+		return 0;
+#endif
 	default:
 		return -ENOIOCTLCMD;
 	}

@@ -172,7 +172,7 @@ struct msm_camera_i2c_read_config {
 	uint16_t slave_addr;
 	uint16_t reg_addr;
 	enum msm_camera_i2c_data_type data_type;
-	uint16_t data;
+	uint16_t *data;
 };
 
 struct msm_camera_csi2_params {
@@ -624,6 +624,10 @@ struct sensor_init_cfg_data {
 
 #define VIDIOC_MSM_OIS_CFG \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 11, struct msm_ois_cfg_data)
+/* [PLATFORM]-Add-BEGIN by SWD3-cuirui, 2015/01/13, OTP dev*/
+#define VIDIOC_MSM_SENSOR_GET_OTP_STATUS \
+        _IOWR('V', BASE_VIDIOC_PRIVATE + 12, uint32_t)
+/* [PLATFORM]-Add-END by SWD3-cuirui, 2015/01/13*/
 
 #define VIDIOC_MSM_FLASH_CFG \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 13, struct msm_flash_cfg_data_t)
