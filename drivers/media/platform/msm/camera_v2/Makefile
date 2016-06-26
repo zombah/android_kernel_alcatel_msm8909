@@ -18,9 +18,3 @@ obj-$(CONFIG_MSMB_CAMERA) += ispif/
 obj-$(CONFIG_MSMB_JPEG) += jpeg_10/
 obj-$(CONFIG_MSMB_CAMERA) += msm_buf_mgr/
 obj-$(CONFIG_MSM_FD) += fd/
-
-# ADD for check module_id 
-ifeq ($(TARGET_BUILD_MMITEST), true)
-KBUILD_CFLAGS += -DMINI_TEST_NO_OTP
-endif
-#end
