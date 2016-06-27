@@ -3334,6 +3334,20 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_RUNTIME_PM;
 	msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR;
 	msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
+
+/* [PLATFORM]-Mod-BEGIN by TCTNB.YuBin, 2015/05/05, tct tlc emmc issue */
+#if defined(CONFIG_TCT_8909_PIXI37) || defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TMO) || defined(CONFIG_TCT_8909_PIXI384G) || defined(CONFIG_TCT_8909_PIXI445_TF)
+	if (pdev->dev.of_node) {
+		/* disable packed write for sdhc1 */
+		if (of_alias_get_id(pdev->dev.of_node, "sdhc") == 1) {
+			msm_host->mmc->caps2 &= ~MMC_CAP2_PACKED_WR;
+			msm_host->mmc->caps2 &= ~MMC_CAP2_PACKED_WR_CONTROL;
+			dev_info(&pdev->dev, "packed write diabled.\n");
+		}
+	}
+#endif
+/* [PLATFORM]-Add-END by TCTNB.YuBin */
+
 	msm_host->mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC |
 				MMC_CAP2_DETECT_ON_ERR);
 	msm_host->mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
