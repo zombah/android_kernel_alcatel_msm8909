@@ -30,16 +30,7 @@
 #include "mdss_debug.h"
 
 #define XO_CLK_RATE	19200000
-/*[BUGFIX]Add Begin by TCTNB-QW 2015-5-7,PR-989958.*/
-#ifdef CONFIG_TCT_8909_PIXI37
-static int lcd_power_en,lcd_bias_enp,lcd_bias_enn;
-#endif
-/*[BUGFIX]Add End by TCTNB-QW 2015-5-7,PR-989958.*/
-/* [PLATFORM]-Add-BEGIN by TCTSZ.yaohui.zeng, 2015/05/13,add LCD*/
-#ifdef CONFIG_TCT_8909_PIXI384G
-static int lcd_power_en,lcd_bias_en;
-#endif
-/* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */
+
 static int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
 
@@ -94,10 +85,8 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 		ret = 0;
 	}
 
-	#ifndef CONFIG_TCT_8909_PIXI445_TF		
 	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
 		pr_debug("reset disable: pinctrl not enabled\n");
-	#endif
 
 /*add start sleep in mode. panel reset H-L-H 2015-7-13*/
 #if (defined CONFIG_TCT_8909_PIXI35 || defined CONFIG_TCT_8909_PIXI355)
@@ -108,82 +97,6 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 #endif
 /*add end sleep in mode. panel reset H-L-H 2015-7-13*/
 
-//add by SH richard.liang 2015-08-14 for PR:1069924
-#if defined(CONFIG_TCT_8909_PIXI445_TF)
-    gpio_set_value((ctrl_pdata->rst_gpio), 0);
-    gpio_free(ctrl_pdata->rst_gpio);		
-#endif  
-//end by SH richard.liang 2015-08-14 for PR:1069924
-
-/*[BUGFIX]Add Begin by TCTNB-QW 2015-5-7,PR-989958.*/
-#ifdef CONFIG_TCT_8909_PIXI37
-	if (gpio_is_valid(lcd_power_en)){
-		ret = gpio_request(lcd_power_en,"lcd_power_enable");
-			if (ret) {
-			pr_err("request lcd_power_enable gpio failed, ret=%d\n",ret);
-				}
-					}
-	if (gpio_is_valid(lcd_bias_enp)){
-		ret = gpio_request(lcd_bias_enp,"lcd_bias_p_enable");
-		if (ret) {
-			pr_err("request lcd_bias_p_enable gpio failed, ret=%d\n",ret);
-		}
-	}
-	if (gpio_is_valid(lcd_bias_enn)){
-		ret = gpio_request(lcd_bias_enn,"lcd_bias_n_enable");
-		if (ret) {
-		pr_err("request lcd_bias_n_enable gpio failed, ret=%d\n",ret);
-		}
-	}
-
-	if (gpio_is_valid(lcd_bias_enn)){
-		gpio_direction_output(lcd_bias_enn,0);
-		gpio_free(lcd_bias_enn);
-	}
-
-	if (gpio_is_valid(lcd_bias_enp)){
-		gpio_direction_output(lcd_bias_enp,0);
-		gpio_free(lcd_bias_enp);
-	}
-
-	if (gpio_is_valid(lcd_power_en)){
-		gpio_direction_output(lcd_power_en,0);
-		gpio_free(lcd_power_en);
-	}
-#endif
-/*[BUGFIX]Add End by TCTNB-QW 2015-5-7,PR-989958.*/
-
-/* [PLATFORM]-Add-BEGIN by TCTSZ.yaohui.zeng, 2015/05/13,add LCD*/
-#ifdef CONFIG_TCT_8909_PIXI384G
-		if (gpio_is_valid(lcd_power_en)){
-				ret = gpio_request(lcd_power_en,"lcd_power_enable");
-				if (ret) {
-					pr_err("request lcd_power_enable gpio failed, ret=%d\n",ret);				}
-			}
-		//judgement for specified panel
-		if (!strcmp(pdata->panel_info.panel_name,"s6d7aa0x04 wxga video mode dsi panel"))
-			;
-		else {
-			if (gpio_is_valid(lcd_bias_en)){
-				ret = gpio_request(lcd_bias_en,"lcd_bias_enable");
-				if (ret) {
-					pr_err("request lcd_bias_enable gpio failed, ret=%d\n",ret);
-				}
-			}
-
-			if (gpio_is_valid(lcd_bias_en)){
-				gpio_direction_output(lcd_bias_en,0);
-				gpio_free(lcd_bias_en);
-			}
-			//add delay after lcd bias power off.
-			mdelay(10);
-		 }
-			if (gpio_is_valid(lcd_power_en)){
-				gpio_direction_output(lcd_power_en,0);
-				gpio_free(lcd_power_en);
-			}
-#endif
-/* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */
 	if (ctrl_pdata->panel_bias_vreg) {
 		pr_debug("%s: Disabling panel bias vreg. ndx = %d\n",
 		       __func__, ctrl_pdata->ndx);
@@ -212,27 +125,6 @@ end:
 	return ret;
 }
 
-#ifdef CONFIG_TCT_8909_PIXI384G
-int set_bias_off(void)
-{
-    int ret=0;
-
-    if (gpio_is_valid(lcd_bias_en)){
-        ret = gpio_request(lcd_bias_en,"lcd_bias_enable");
-        if (ret) {
-            pr_err("request lcd_bias_enable gpio failed, ret=%d\n",ret);
-            goto error;
-        }
-    }
-
-    if (gpio_is_valid(lcd_bias_en)){
-        gpio_direction_output(lcd_bias_en,0);
-        gpio_free(lcd_bias_en);
-    }
-error:
-    return ret;
-}
-#endif
 static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -273,68 +165,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	}
 
 	i--;
-/*[BUGFIX]Add Begin by TCTNB-QW 2015-5-7,PR-989958.*/
-#ifdef CONFIG_TCT_8909_PIXI37
-	if (!pdata->panel_info.cont_splash_enabled){
-		if (gpio_is_valid(lcd_power_en)){
-			ret = gpio_request(lcd_power_en,"lcd_power_enable");
-			if (ret) {
-				pr_err("request lcd_power_enable gpio failed, ret=%d\n",ret);
-			}
-		}
-		if (gpio_is_valid(lcd_bias_enp)){
-			ret = gpio_request(lcd_bias_enp,"lcd_bias_p_enable");
-			if (ret) {
-				pr_err("request lcd_bias_p_enable gpio failed, ret=%d\n",ret);
-			}
-		}
-		if (gpio_is_valid(lcd_bias_enn)){
-			ret = gpio_request(lcd_bias_enn,"lcd_bias_n_enable");
-			if (ret) {
-			pr_err("request lcd_bias_n_enable gpio failed, ret=%d\n",ret);
-			}
-		}
-		gpio_direction_output(lcd_power_en,1);
-		mdelay(10);
-		gpio_direction_output(lcd_bias_enp,1);
-		gpio_direction_output(lcd_bias_enn,1);
-		mdelay(10);
-		gpio_free(lcd_bias_enn);
-		gpio_free(lcd_bias_enp);
-		gpio_free(lcd_power_en);
-		}
-#endif
-/*[BUGFIX]Add End by TCTNB-QW 2015-5-7,PR-989958.*/
 
-/* [PLATFORM]-Add-BEGIN by TCTSZ.yaohui.zeng, 2015/05/13,add LCD*/
-#ifdef CONFIG_TCT_8909_PIXI384G
-	if (!pdata->panel_info.cont_splash_enabled) {
-		if (gpio_is_valid(lcd_power_en)){
-			ret = gpio_request(lcd_power_en,"lcd_power_enable");
-			if (ret) {
-				pr_err("request lcd_power_enable gpio failed, ret=%d\n",ret);
-			}
-		}
-		if (strcmp(pdata->panel_info.panel_name,"s6d7aa0x04 wxga video mode dsi panel")) {
-		    if (gpio_is_valid(lcd_bias_en)){
-			    ret = gpio_request(lcd_bias_en,"lcd_bias_enable");
-			    if (ret) {
-				    pr_err("request lcd_bias_en gpio failed, ret=%d\n",ret);
-			    }
-		    }
-		}
-		gpio_direction_output(lcd_power_en,1);
-		mdelay(10);
-		if (strcmp(pdata->panel_info.panel_name,"s6d7aa0x04 wxga video mode dsi panel")) {
-		    gpio_direction_output(lcd_bias_en,1);
-		    mdelay(50);
-		    gpio_free(lcd_bias_en);
-		}
-		gpio_free(lcd_power_en);
-
-	}
-#endif
-/* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */
 	/*
 	 * If continuous splash screen feature is enabled, then we need to
 	 * request all the GPIOs that have already been configured in the
@@ -343,11 +174,8 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	 */
 	if (pdata->panel_info.cont_splash_enabled ||
 		!pdata->panel_info.mipi.lp11_init) {
-
-        #ifndef CONFIG_TCT_8909_PIXI445_TF
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
-	    #endif
 
 		ret = mdss_dsi_panel_reset(pdata, 1);
 		if (ret)
@@ -365,25 +193,6 @@ error:
 	return ret;
 }
 
-#ifdef CONFIG_TCT_8909_PIXI384G
-int lcd_enable_bias(void)
-{
-    int ret=0;
-    if (gpio_is_valid(lcd_bias_en)) {
-        ret = gpio_request(lcd_bias_en,"lcd_bias_enable");
-        if (ret) {
-            pr_err("request lcd_bias_en gpio failed, ret=%d\n",ret);
-            goto error;
-        }
-    }
-    if (gpio_is_valid(lcd_bias_en)) {
-        gpio_direction_output(lcd_bias_en,1);
-        gpio_free(lcd_bias_en);
-    }
-error:
-    return ret;
-}
-#endif
 static int mdss_dsi_panel_power_doze(struct mdss_panel_data *pdata, int enable)
 {
 	/* Panel power control when entering/exiting doze mode */
@@ -797,12 +606,9 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	 * Issue hardware reset line after enabling the DSI clocks and data
 	 * data lanes for LP11 init
 	 */
-
 	if (mipi->lp11_init) {
-        #ifndef CONFIG_TCT_8909_PIXI445_TF
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
-		#endif
 		mdss_dsi_panel_reset(pdata, 1);
 	}
 
@@ -880,59 +686,6 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_TCT_8909_PIXI355
-#include <linux/i2c.h>
-
-#define LCD_TPS65132_I2C_ADDRESS		       0x3E
-#define LCD_TPS65132_VPOS_ADDRESS		0x00
-#define LCD_TPS65132_VNEG_ADDRESS		0x01
-#define LCD_TPS65132_DIS_ADDRESS		       0x03
-#define LCD_TPS65132_CONTROL_ADDRESS       0xFF
-
-extern struct i2c_client *lcd_client;
-static int lcd_tps65132_i2c_write(u8 addr, u8 val)
-{
-	int ret = 0;
-	struct i2c_msg msg;
-	u8 data_buf[] = {addr,val};
-	
-       msg.flags = !I2C_M_RD;
-       msg.addr  = LCD_TPS65132_I2C_ADDRESS;
-       msg.len   = 2;
-       msg.buf   = data_buf;
-
-	ret = i2c_transfer(lcd_client->adapter, &msg, 1);
-	
-	if(ret < 0) {
-		pr_err( "i2c transfer  error %d\n", ret);
-		return ret;
-	}
-	return 0;
-}
-static void lcd_tps65132_init(void)
-{
-	int ret = 0;
-	
-	ret = lcd_tps65132_i2c_write(LCD_TPS65132_VPOS_ADDRESS, 0x0F); /* modify VPOS address 0x0F output 5.5V By BaoChangSheng*/
-	if (ret) {
-		printk("VPOS Register: I2C Write failure\n");
-	}
-	ret = lcd_tps65132_i2c_write(LCD_TPS65132_VNEG_ADDRESS, 0x0F); /* modify VNEG address 0x0F output -5.5V By BaoChangSheng*/
-	if (ret) {
-		printk("VNEG Register: I2C write failure\n");
-	}
-	ret = lcd_tps65132_i2c_write(LCD_TPS65132_DIS_ADDRESS, 0x0F);
-	if (ret) {
-		pr_err("Apps freq DIS Register: I2C write failure\n");
-	}
-       ret = lcd_tps65132_i2c_write(LCD_TPS65132_CONTROL_ADDRESS, 0xF0);
-	if (ret) {
-		pr_err("Control Register: I2C write failure\n");
-	}
-}
-#endif
-static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
-{
 	int ret = 0;
 	struct mipi_panel_info *mipi;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -941,11 +694,6 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
-	
-#if (!defined CONFIG_TCT_8909_PIXI35 &&  !defined CONFIG_TCT_8909_PIXI355)
-
-      dump_stack();
-#endif
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -962,11 +710,6 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 			ret = ctrl_pdata->low_power_config(pdata, false);
 		goto error;
 	}
-    /* resume lcd output +/-5.5v by BaoChangSheng */
-#ifdef CONFIG_TCT_8909_PIXI355
-	lcd_tps65132_init(); //jhyu_fix 1004527, modify this funtion from int return to void return.
-#endif
-/* resume lcd output +/-5.5v by BaoChangSheng */
 
 	if (!(ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT)) {
 		if (!pdata->panel_info.dynamic_switch_pending) {
@@ -980,27 +723,17 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 		ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
 	}
 
-#ifdef CONFIG_TCT_8909_PIXI355
-      //add by SH richard.liang for LCD TE mode
-	mdss_dsi_set_tear_on(ctrl_pdata);
-	if (mdss_dsi_is_te_based_esd(ctrl_pdata)){
-		enable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
-		//printk(KERN_NOTICE "=========== richard: enable TE irq\n");
-	}
-	//end richard.liang
-#else
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		mdss_dsi_set_tear_on(ctrl_pdata);
-		if (mdss_dsi_is_te_based_esd(ctrl_pdata)){
+		if (mdss_dsi_is_te_based_esd(ctrl_pdata))
 			enable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
 	}
-	}
-#endif
 
 error:
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 	pr_debug("%s-:\n", __func__);
+
 	return ret;
 }
 
@@ -1050,17 +783,6 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		}
 	}
 
-#ifdef CONFIG_TCT_8909_PIXI355
-      //add by SH richard.liang for LCD TE mode
-	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
-			disable_irq(gpio_to_irq(
-				ctrl_pdata->disp_te_gpio));
-			atomic_dec(&ctrl_pdata->te_irq_ready);
-			//printk(KERN_NOTICE "=========== richard: disable TE irq\n");
-	}
-	mdss_dsi_set_tear_off(ctrl_pdata);
-	//end richard.liang
-#else
 	if ((pdata->panel_info.type == MIPI_CMD_PANEL) &&
 		mipi->vsync_enable && mipi->hw_vsync_mode) {
 		if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
@@ -1070,7 +792,6 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		}
 		mdss_dsi_set_tear_off(ctrl_pdata);
 	}
-#endif
 
 	if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT) {
 		if (!pdata->panel_info.dynamic_switch_pending) {
@@ -1495,7 +1216,6 @@ static int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata)
 	ctrl_pdata->refresh_clk_rate = false;
 	ctrl_pdata->pclk_rate = pdata->panel_info.mipi.dsi_pclk_rate;
 	ctrl_pdata->byte_clk_rate = pdata->panel_info.clk_rate / 8;
-
 	pr_debug("%s ctrl_pdata->byte_clk_rate=%d ctrl_pdata->pclk_rate=%d\n",
 		__func__, ctrl_pdata->byte_clk_rate, ctrl_pdata->pclk_rate);
 	return rc;
@@ -1517,7 +1237,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	pr_debug("%s+: ctrl=%d event=%d\n", __func__, ctrl_pdata->ndx, event);
 
 	MDSS_XLOG(event, arg, ctrl_pdata->ndx, 0x3333);
-	  
+
 	switch (event) {
 	case MDSS_EVENT_CHECK_PARAMS:
 		pr_debug("%s:Entered Case MDSS_EVENT_CHECK_PARAMS\n", __func__);
@@ -1698,25 +1418,6 @@ end:
 	return dsi_pan_node;
 }
 
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-static int mdss_dsi_blk_ctrl_gpio_request(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
-{
-	int rc = 0;
-
-	if (gpio_is_valid(ctrl_pdata->bkl_ctrl_gpio)) {
-		rc = gpio_request(ctrl_pdata->bkl_ctrl_gpio,
-						"blk_ctrl_enable");
-		if (rc) {
-			pr_err("request blk_ctrl_gpio failed, rc=%d\n",
-					   rc);
-			goto blk_ctrl_gpio_err;
-		}
-	}
-	
-blk_ctrl_gpio_err:
-	return rc;
-}
-#endif
 static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 {
 	int rc = 0, i = 0;
@@ -1851,21 +1552,6 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		goto error_pan_node;
 	}
 
-#ifdef CONFIG_TCT_8909_PIXI355
-      //add by SH richard.liang for LCD TE mode
-	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
-		rc = devm_request_irq(&pdev->dev,
-			gpio_to_irq(ctrl_pdata->disp_te_gpio),
-			hw_vsync_handler, IRQF_TRIGGER_FALLING,
-			"TE_GPIO", ctrl_pdata);
-		if (rc) {
-			pr_err("TE request_irq failed.\n");
-			goto error_pan_node;
-		}
-		printk(KERN_NOTICE "=========== richard: register TE irq success\n");
-	}
-	//end richard.liang
-#else
 	if (mdss_dsi_is_te_based_esd(ctrl_pdata)) {
 		rc = devm_request_irq(&pdev->dev,
 			gpio_to_irq(ctrl_pdata->disp_te_gpio),
@@ -1877,14 +1563,6 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		}
 		disable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
 	}
-#endif	
-    #ifdef CONFIG_TCT_8909_PIXI445_TF
-	rc = mdss_dsi_blk_ctrl_gpio_request(ctrl_pdata);
-	if (rc) {
-		pr_err("%s: cwying blk_ctrl_gpio_request failed\n", __func__);
-		goto error_pan_node;
-	}
-    #endif
 	pr_debug("%s: Dsi Ctrl->%d initialized\n", __func__, index);
 	return 0;
 
@@ -2159,61 +1837,11 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	if (!gpio_is_valid(ctrl_pdata->bklt_en_gpio))
 		pr_info("%s: bklt_en gpio not specified\n", __func__);
 
-    #ifdef CONFIG_TCT_8909_PIXI445_TF
-	ctrl_pdata->bkl_ctrl_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-		"qcom,platform-blk-ctrl-gpio", 0);
-	if (!gpio_is_valid(ctrl_pdata->bkl_ctrl_gpio))
-		pr_err("%s %d: bklt_en gpio not specified\n", __func__,ctrl_pdata->bkl_ctrl_gpio);
-	else
-		pr_err("%s %d:cwying  bklt_en gpio succes\n", __func__,ctrl_pdata->bkl_ctrl_gpio);
-    #endif
 	ctrl_pdata->rst_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 			 "qcom,platform-reset-gpio", 0);
 	if (!gpio_is_valid(ctrl_pdata->rst_gpio))
 		pr_err("%s:%d, reset gpio not specified\n",
 						__func__, __LINE__);
-/*[BUGFIX]Add Begin by TCTNB-QW 2015-5-7,PR-989958.*/
-#ifdef CONFIG_TCT_8909_PIXI37
-	pr_err("get lcd_power_en gpio \n");
-	lcd_power_en = of_get_named_gpio(ctrl_pdev->dev.of_node,
-			 "qcom,platform-power-en-gpio", 0);
-	if (!gpio_is_valid(lcd_power_en))
-		pr_err("%s:%d, lcd_power_en gpio not specified\n",
-						__func__, __LINE__);
-
-	pr_err("get lcd_bias_enp gpio \n");
-	lcd_bias_enp = of_get_named_gpio(ctrl_pdev->dev.of_node,
-			 "qcom,platform-bias-enp-gpio", 0);
-	if (!gpio_is_valid(lcd_bias_enp))
-		pr_err("%s:%d, lcd_bias_enp gpio not specified\n",
-						__func__, __LINE__);
-
-	pr_err("get lcd_bias_enn gpio \n");
-	lcd_bias_enn = of_get_named_gpio(ctrl_pdev->dev.of_node,
-			 "qcom,platform-bias-enn-gpio", 0);
-	if (!gpio_is_valid(lcd_bias_enn))
-		pr_err("%s:%d, lcd_bias_enn gpio not specified\n",
-						__func__, __LINE__);
-#endif
-/*[BUGFIX]Add End by TCTNB-QW 2015-5-7,PR-989958.*/
-
-/* [PLATFORM]-Add-BEGIN by TCTSZ.yaohui.zeng, 2015/05/13,add LCD*/
-#ifdef CONFIG_TCT_8909_PIXI384G
-	pr_err("get lcd_power_en gpio \n");
-	lcd_power_en = of_get_named_gpio(ctrl_pdev->dev.of_node,
-			 "qcom,platform-power-en-gpio", 0);
-	if (!gpio_is_valid(lcd_power_en))
-		pr_err("%s:%d, lcd_power_en gpio not specified\n",
-						__func__, __LINE__);
-
-	pr_err("get lcd_bias_en gpio \n");
-	lcd_bias_en = of_get_named_gpio(ctrl_pdev->dev.of_node,
-			 "qcom,platform-bias-en-gpio", 0);
-	if (!gpio_is_valid(lcd_bias_en))
-		pr_err("%s:%d, lcd_bias_en gpio not specified\n",
-						__func__, __LINE__);
-#endif
-/* [PLATFORM]-Add-END by TCTSZ.yaohui.zeng, 2015/05/13 */	
 
 	if (pinfo->mode_gpio_state != MODE_GPIO_NOT_VALID) {
 
@@ -2314,10 +1942,6 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		}
 	}
 
-    #ifdef CONFIG_TCT_8909_PIXI445_TF
-	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
-		pr_err("reset enable: pinctrl not enabled\n");
-    #endif
 	if (pinfo->cont_splash_enabled) {
 		rc = mdss_dsi_panel_power_ctrl(&(ctrl_pdata->panel_data),
 			MDSS_PANEL_POWER_ON);

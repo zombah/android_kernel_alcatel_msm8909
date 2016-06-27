@@ -30,12 +30,7 @@
 #include "mdss_panel.h"
 #include "mdss_mdp.h"
 
-#ifdef CONFIG_TCT_8909_PIXI355
-#define STATUS_CHECK_INTERVAL_MS 2000
-#else
 #define STATUS_CHECK_INTERVAL_MS 5000
-#endif
-
 #define STATUS_CHECK_INTERVAL_MIN_MS 50
 #define DSI_STATUS_CHECK_INIT -1
 #define DSI_STATUS_CHECK_DISABLE 1
@@ -72,7 +67,6 @@ static void check_dsi_ctrl_status(struct work_struct *work)
 		return;
 	}
 
-      printk(KERN_NOTICE "=========== richard: start LCD recovery work\n");
 	pdsi_status->mfd->mdp.check_dsi_status(work, interval);
 }
 
@@ -85,7 +79,6 @@ static void check_dsi_ctrl_status(struct work_struct *work)
  * panel. This resets the timer of ESD delayed workqueue back to initial
  * value.
  */
-//static u8 trigger_num = 0;     //add by richard.liang for test
 irqreturn_t hw_vsync_handler(int irq, void *data)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata =
@@ -94,17 +87,6 @@ irqreturn_t hw_vsync_handler(int irq, void *data)
 		pr_err("%s: DSI ctrl not available\n", __func__);
 		return IRQ_HANDLED;
 	}
-
-#if 0
-      //add by richard.liang for test
-      trigger_num++;
-	if(trigger_num >= 60)
-	{
-	    trigger_num = 0;
-	    printk(KERN_NOTICE "=========== richard: TE irq handler enter\n");
-	}
-	//end richard.liang
-#endif
 
 	if (pstatus_data)
 		mod_delayed_work(system_wq, &pstatus_data->check_status,

@@ -624,76 +624,6 @@ static void mdss_dsi_cmd_stop_hs_clk_lane(struct mdss_dsi_ctrl_pdata *ctrl)
 	mdss_dsi_stop_hs_clk_lane(ctrl, DSI_CMD_TERM);
 }
 
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-static void mdss_dsi_lp_rx_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl)
-{
-	u32 data0;
-	u32 ln0, ln_ctrl0, i;
-	u32 ln_force_tx_stop = BIT(16) | BIT(17) | BIT(18) | BIT(19) | BIT(20);
-	/*
-	 * Add 2 ms delay suggested by HW team.
-	 * Check data lane stop state after every 200 us
-	 */
-	u32 loop = 10, u_dly = 200;
-	pr_debug("%s: DSI CTRL and PHY reset for LP_RX_TO. ctrl-num = %d\n",
-					__func__, ctrl->ndx);
-	/* Disable PHY contention detection and receive */
-	MIPI_OUTP((ctrl->phy_io.base) + 0x0188, 0);
-
-	data0 = MIPI_INP(ctrl->ctrl_base + 0x0004);
-	/* Disable DSI video mode */
-	MIPI_OUTP(ctrl->ctrl_base + 0x004, (data0 & ~BIT(1)));
-	/* Disable DSI controller */
-	MIPI_OUTP(ctrl->ctrl_base + 0x004, (data0 & ~(BIT(0) | BIT(1))));
-	/* "Force On" all dynamic clocks */
-	MIPI_OUTP(ctrl->ctrl_base + 0x11c, 0x100a00);
-
-	/* DSI_SW_RESET */
-	MIPI_OUTP(ctrl->ctrl_base + 0x118, 0x1);
-	wmb();
-	MIPI_OUTP(ctrl->ctrl_base + 0x118, 0x0);
-	wmb();
-
-	/* Remove "Force On" all dynamic clocks */
-	MIPI_OUTP(ctrl->ctrl_base + 0x11c, 0x00);
-	/* Enable DSI controller */
-	MIPI_OUTP(ctrl->ctrl_base + 0x004, (data0 & ~BIT(1)));
-
-	/*
-	 * Toggle lanes Force TX stop so that
-	 * lane status is no more in stop state
-	 */
-	ln0 = MIPI_INP(ctrl->ctrl_base + 0x00a8);
-	pr_debug("%s: lane status, ctrl = 0x%x\n",
-			 __func__, ln0);
-	ln_ctrl0 = MIPI_INP(ctrl->ctrl_base + 0x00ac);
-	MIPI_OUTP(ctrl->ctrl_base + 0x0ac, ln_ctrl0 | ln_force_tx_stop);
-	ln_ctrl0 = MIPI_INP(ctrl->ctrl_base + 0x00ac);
-	for (i = 0; i < loop; i++) {
-		ln0 = MIPI_INP(ctrl->ctrl_base + 0x00a8);
-		if (ln0 == 0x1f1f)
-			break;
-		else
-			/* Check clk lane stopState for every 200us */
-			udelay(u_dly);
-	}
-	if (i == loop) {
-		MDSS_XLOG(ctrl->ndx, ln0, 0x1f1f);
-		pr_err("Data lane still in wrong state");
-		MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1",
-					"panic");
-	}
-	pr_debug("%s: lane status = 0x%x\n", __func__, ln0);
-	MIPI_OUTP(ctrl->ctrl_base + 0x0ac, ln_ctrl0 & ~ln_force_tx_stop);
-
-	/* Enable Video mode for DSI controller */
-	MIPI_OUTP(ctrl->ctrl_base + 0x004, data0);
-	/* Enable PHY contention detection and receiver */
-	MIPI_OUTP((ctrl->phy_io.base) + 0x0188, 0x6);
-
-	return;
-}
-#endif
 static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 {
 	u32 data0, data1, mask = 0, data_lane_en = 0;
@@ -2244,13 +2174,6 @@ static int dsi_event_thread(void *data)
 			mdss_dsi_err_intr_ctrl(ctrl, DSI_INTR_ERROR_MASK, 1);
 			mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 0);
 		}
-        #ifdef CONFIG_TCT_8909_PIXI445_TF
-		if (todo & DSI_EV_LP_RX_TIMEOUT) {
-			mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 1);
-			mdss_dsi_lp_rx_ctl_phy_reset(ctrl);
-			mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 0);
-		}
-        #endif
 
 		if (todo & DSI_EV_STOP_HS_CLK_LANE)
 			mdss_dsi_stop_hs_clk_lane(ctrl, arg);

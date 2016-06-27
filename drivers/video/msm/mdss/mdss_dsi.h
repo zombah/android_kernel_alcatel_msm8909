@@ -90,9 +90,6 @@ enum dsi_panel_bl_ctrl {
 	BL_PWM,
 	BL_WLED,
 	BL_DCS_CMD,
-	#ifdef CONFIG_TCT_8909_PIXI445_TF
-	BL_GPIO_CMD,
-	#endif
 	UNKNOWN_CTRL,
 };
 
@@ -338,9 +335,6 @@ struct mdss_dsi_ctrl_pdata {
 	bool pwm_pmi;
 	int pwm_period;
 	int pwm_pmic_gpio;
-	#ifdef CONFIG_TCT_8909_PIXI445_TF
-	int bkl_ctrl_gpio;
-	#endif
 	int pwm_lpg_chan;
 	int bklt_max;
 	int new_fps;
@@ -366,10 +360,6 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds off_cmds;
-#ifdef CONFIG_TCT_8909_PIXI384G
-	struct dsi_panel_cmds on1_cmds;
-	struct dsi_panel_cmds off1_cmds;
-#endif
 	struct dsi_panel_cmds status_cmds;
 	u32 status_cmds_rlen;
 	u32 status_value;

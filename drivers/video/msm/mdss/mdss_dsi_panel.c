@@ -35,11 +35,7 @@
 #define MIN_REFRESH_RATE 30
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
-#ifdef CONFIG_TCT_8909_PIXI445_TF
 
-int iLevel =0;
-int bLogEnable =0;
-#endif
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	if (ctrl->pwm_pmi)
@@ -53,112 +49,6 @@ void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 	ctrl->pwm_enabled = 0;
 }
 
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-#define BRIGHTNESS_MAX_SIZE 31 //
-static void mdss_dsi_panel_bklt_gpio(struct mdss_dsi_ctrl_pdata *ctrl_pdata, int brightness)
-{
-	static int bl_level_l = 0; // Added  for avoid repeat set brightness level
-	static int first_boot = 1; // 1: the first time bootup kernel
-	unsigned char addr = 0x72; // 0111 0010
-	unsigned long flags;
-	int tl, th, i;
-	int bl_level;
-
-//step 1: Calculate the actual backlight level
-	struct mdss_panel_info *pinfo = &(ctrl_pdata->panel_data.panel_info);
-
-	bl_level = (int)( brightness * BRIGHTNESS_MAX_SIZE /pinfo->brightness_max);
-	if (bl_level >= BRIGHTNESS_MAX_SIZE) {
-		bl_level = BRIGHTNESS_MAX_SIZE - 1;
-	}
-
-	if ( brightness < 9 &&  brightness ){
-			bl_level = 1;
-	}
-
-	if(1==bLogEnable)
-		pr_warn("%s, brightness: %d, level:%d  bl_level_l:%d \n", __func__, brightness, bl_level,bl_level_l);
-	//add end
-	//shield discontinuity
-	local_irq_save(flags);
-	
-	if ((bl_level_l == bl_level)&& (first_boot == 0)){
-		goto EXIT;
-	}
-
-//step 2: dimming mode select
-	if ((bl_level_l <= 0) && (first_boot == 0)){
-		pr_warn("Report pwrkey %s, backlight on ,current backlight level = %d ---\n", __func__ ,bl_level); //baoqiang add to fix led bug 0211//modify by yusen.ke.sz@tcl.com at20140401
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 1);
-		udelay(120); // greater than 260us
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 0);
-		udelay(300); // greater than 100us
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 1);
-		udelay(200);
-	}
-	
-	//backlight ic OFF
-	if (bl_level <= 0) {
-		
-		pr_warn("Report pwrkey %s, backlight off,Before backlight level = %d ---\n", __func__, bl_level_l); //baoqiang.qin add to fix leds bug 0211//modify by yusen.ke.sz@tcl.com at20140401
-		first_boot = 0;		
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 0);
-		mdelay(3);
-		bl_level_l = bl_level; // reset static variable 'bl_level_l'
-		goto EXIT;
-	}
-
-	// avoid repeat set brightness level
-	
-	bl_level_l = bl_level;
-	
-//step 3: Address transfer
-	for (i = 7; i >= 0; i--) {
-		if (addr & (0x01 << i)) {
-			tl = 40; // 2us ~ 180us(ktd2599) or 10us ~ 180us(sgm3733)
-			th = 100; // 2 * (tl)us ~ 360us
-		} else {
-			th = 40; // 2us ~ 180us(ktd2599) or 10us ~ 180us(sgm3733) 
-			tl = 100; // 2 * (th)us ~ 360us
-		}
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 0);
-		udelay(tl);
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 1);
-		udelay(th);
-	}
-	// EOS
-	gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 0);
-	udelay(100); // 2us ~ 360us(ktd2599) or 10us ~ 360us(sgm3733)
-	
-//step 4: Data transfer
-	// Start
-	gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 1);
-	udelay(50); // ctrl start, greater than 2us(ktd2599) or 10us(sgm3733)
-	// Data
-	for (i = 7; i >= 0; i--) {
-		if (bl_level & (0x01 << i)) {
-			tl = 40; // 2us ~ 180us(ktd2599) or 10us ~ 180us(sgm3733)
-			th = 100; // 2 * (tl)us ~ 360us
-		} else {
-			th = 40; // 2us ~ 180us(ktd2599) or 10us ~ 180us(sgm3733)
-			tl = 100; // 2 * (th)us ~ 360us
-		}
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 0);
-		udelay(tl);
-		gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 1);
-		udelay(th);
-	}
-	// EOS
-	gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 0);
-	udelay(100); // 2us ~ 360us(ktd2599) or 10us ~ 360us(sgm3733)
-//step 5: keep high level
-	gpio_direction_output(ctrl_pdata->bkl_ctrl_gpio, 1);
-EXIT:
-	local_irq_restore(flags);
-	iLevel = bl_level;//add by yusen.ke.sz@tcl.com at 20140420 for display backlight level
-	return ;
-}
-#endif
 static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	int ret;
@@ -434,20 +324,8 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 0);
 			gpio_free(ctrl_pdata->disp_en_gpio);
 		}
-/*add start sleep in mode. panel reset H-L-H 2015-7-13*/
-#if (!defined CONFIG_TCT_8909_PIXI35 &&  !defined CONFIG_TCT_8909_PIXI355)
-        #ifdef CONFIG_TCT_8909_PIXI445_TF
-			gpio_set_value((ctrl_pdata->rst_gpio), 1);
-			msleep(1);
-	    #endif
 		gpio_set_value((ctrl_pdata->rst_gpio), 0);
-		#ifdef CONFIG_TCT_8909_PIXI445_TF
-			msleep(10);
-			gpio_set_value((ctrl_pdata->rst_gpio), 1);
-        #endif
 		gpio_free(ctrl_pdata->rst_gpio);
-#endif
-/*add end sleep in mode. panel reset H-L-H 2015-7-13*/
 		if (gpio_is_valid(ctrl_pdata->mode_gpio))
 			gpio_free(ctrl_pdata->mode_gpio);
 	}
@@ -709,23 +587,12 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 				mdss_dsi_panel_bklt_dcs(sctrl, bl_level);
 		}
 		break;
-    #ifdef CONFIG_TCT_8909_PIXI445_TF
-	case BL_GPIO_CMD:
-		mdss_dsi_panel_bklt_gpio(ctrl_pdata, bl_level);
-		udelay(1500);
-		break;
-	#endif
 	default:
 		pr_err("%s: Unknown bl_ctrl configuration\n",
 			__func__);
 		break;
 	}
 }
-
-#ifdef CONFIG_TCT_8909_PIXI384G
-extern int lcd_enable_bias(void);
-extern int set_bias_off(void);
-#endif
 
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
@@ -750,15 +617,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	if (ctrl->on_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->on_cmds);
-#ifdef CONFIG_TCT_8909_PIXI384G
-    mdelay(5); // it's better to delay 5ms after each mipi cmd
-    if (!strcmp(pinfo->panel_name, "s6d7aa0x04 wxga video mode dsi panel")){
-		lcd_enable_bias();
-		mdelay(120);
-		if (ctrl->on1_cmds.cmd_cnt)
-			mdss_dsi_panel_cmds_send(ctrl, &ctrl->on1_cmds);
-    }
-#endif
 
 end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
@@ -790,18 +648,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds);
 
-#ifdef CONFIG_TCT_8909_PIXI384G
-    mdelay(5); // it's better to delay 5ms after each mipi cmd
-
-    if (!strcmp(pinfo->panel_name, "s6d7aa0x04 wxga video mode dsi panel")) {
-        set_bias_off();
-        mdelay(120);
-        if (ctrl->off1_cmds.cmd_cnt) {
-            mdss_dsi_panel_cmds_send(ctrl, &ctrl->off1_cmds);
-            mdelay(5);
-        }
-    }
-#endif
 end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
 	pr_debug("%s:-\n", __func__);
@@ -1616,11 +1462,6 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			pr_debug("%s: Configured DCS_CMD bklt ctrl\n",
 								__func__);
 		}
-        #ifdef CONFIG_TCT_8909_PIXI445_TF
-		else if (!strncmp(data, "bl_ctrl_gpio", 12)) {
-			ctrl_pdata->bklt_ctrl = BL_GPIO_CMD;
-		}
-		#endif
 	}
 	rc = of_property_read_u32(np, "qcom,mdss-brightness-max-level", &tmp);
 	pinfo->brightness_max = (!rc ? tmp : MDSS_MAX_BL_BRIGHTNESS);
@@ -1769,12 +1610,6 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->off_cmds,
 		"qcom,mdss-dsi-off-command", "qcom,mdss-dsi-off-command-state");
-#ifdef CONFIG_TCT_8909_PIXI384G
-	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->on1_cmds,
-		"qcom,mdss-dsi-on-command1", "qcom,mdss-dsi-on-command-state");
-	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->off1_cmds,
-		"qcom,mdss-dsi-off-command1", "qcom,mdss-dsi-off-command-state");
-#endif
 
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->status_cmds,
 			"qcom,mdss-dsi-panel-status-command",
@@ -1801,16 +1636,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			ctrl_pdata->check_read_status =
 						mdss_dsi_nt35596_read_status;
 		} else if (!strcmp(data, "te_signal_check")) {
-		      #ifdef CONFIG_TCT_8909_PIXI355
-				ctrl_pdata->status_mode = ESD_TE;
-			#else
 			if (pinfo->mipi.mode == DSI_CMD_MODE)
-				{
 				ctrl_pdata->status_mode = ESD_TE;
-				}
 			else
 				pr_err("TE-ESD not valid for video mode\n");
-			#endif
 		}
 	}
 

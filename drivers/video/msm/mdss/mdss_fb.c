@@ -51,8 +51,6 @@
 #include <linux/qcom_iommu.h>
 #include <linux/msm_iommu_domains.h>
 
-#include <linux/rtc.h>
-
 #include "mdss_fb.h"
 #include "mdss_mdp_splash_logo.h"
 
@@ -232,21 +230,6 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 
 static int lcd_backlight_registered;
 
-//Add by Luoxingxing for check the LCD backlight.
-#ifdef CONFIG_TCT_8909_PIXI355
-static void print_blk_time(int bl_lvl)
-{
-	struct timespec ts;
-	struct rtc_time tm;
-
-	getnstimeofday(&ts);
-	rtc_time_to_tm(ts.tv_sec, &tm);
-	pr_err("[LCD-BACKLIGHT]Value:%d  %d-%02d-%02d %02d:%02d:%02d.%09lu\n",
-		bl_lvl, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-		tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
-}
-#endif
-
 static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 				      enum led_brightness value)
 {
@@ -270,9 +253,6 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 		mdss_fb_set_backlight(mfd, bl_lvl);
 		mutex_unlock(&mfd->bl_lock);
 	}
-#ifdef CONFIG_TCT_8909_PIXI355	
-	print_blk_time(bl_lvl);
-#endif
 }
 
 static struct led_classdev backlight_led = {
