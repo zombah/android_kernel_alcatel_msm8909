@@ -1329,19 +1329,7 @@ static int qpnp_pwm_config(struct pwm_chip *pwm_chip,
 
 	if (prev_period_us > INT_MAX / NSEC_PER_USEC ||
 			prev_period_us * NSEC_PER_USEC != period_ns) {
-/* [PLATFORM]-Mod-BEGIN by TCT.WPL, 2015/04/17, FR-967592 */
-	#ifdef CONFIG_TCT_8909_PIXI37
-		if(0==strcmp(pwm->label,"lcd-bklt"))
-		{
-			chip->pwm_config.period.pwm_size = 9;
-			chip->pwm_config.period.clk = 2;
-			chip->pwm_config.period.pre_div = 0;
-			chip->pwm_config.period.pre_div_exp = 0;
-		}
-	#else
 		qpnp_lpg_calc_period(LVL_NSEC, period_ns, chip);
-	#endif
-/* [PLATFORM]-Mod-END by TCT.WPL, 2015/04/17, FR-967592 */
 		qpnp_lpg_save_period(chip);
 		pwm->period = period_ns;
 		chip->pwm_config.pwm_period = period_ns / NSEC_PER_USEC;
