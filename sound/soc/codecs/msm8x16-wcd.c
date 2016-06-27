@@ -216,36 +216,6 @@ struct msm8x16_wcd_spmi msm8x16_wcd_modules[MAX_MSM8X16_WCD_DEVICE];
 static void *modem_state_notifier;
 
 static struct snd_soc_codec *registered_codec;
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-
-static int ear_hac_gpio = -1;
-static int ear_power_hac_init = 0;
-
-static int msm8x10_ear_power_hac_init(struct device *dev)
-{
-    int ret = 0;
-
-    if (ear_power_hac_init)
-        return 0;
-    
-    ear_hac_gpio = of_get_named_gpio(dev->of_node, "qcom,ear-hac-gpio", 0);
-    printk("msm8x10_ear_power_hac_init gpio = %d\n", ear_hac_gpio);
-    if (ear_hac_gpio >= 0) {
-        ret = gpio_request(ear_hac_gpio, "ear_hac_gpio");
-        if (ret) {
-            pr_err("%s: gpio_request failed for ear_hac_gpio.\n",
-                __func__);
-            return -EINVAL;
-        }
-        gpio_direction_output(ear_hac_gpio, 0);
-    }
-
-    ear_power_hac_init = 1;
-    
-    return 0;
-}
-
-#endif
 
 void msm8x16_wcd_spk_ext_pa_cb(
 		int (*codec_spk_ext_pa)(struct snd_soc_codec *codec,
@@ -1206,47 +1176,6 @@ static int msm8x16_wcd_ear_pa_boost_set(struct snd_kcontrol *kcontrol,
 		(ucontrol->value.integer.value[0] ? true : false);
 	return 0;
 }
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-
-static void msm8x10_enable_ear_hac_power_amp(u32 on)
-{
-    int ret = 0;
-    
-    printk("msm8x10_enable_ear_hac_power_amp ear_hac_gpio = %d, on = %d\n", ear_hac_gpio, on);
-	if (ear_hac_gpio < 0)
-        return;
-    
-	if (on) {
-		ret = gpio_direction_output(ear_hac_gpio, on);
-	} else {
-		ret = gpio_direction_output(ear_hac_gpio, on);
-	}
-
-    printk("msm8x10_enable_ear_hac_power_amp ret = %d\n", ret);
-
-	printk("%s: %s external ear PAs.\n", __func__,
-			on ? "Enable" : "Disable");
-}
-
-static int msm8x10_wcd_ear_hac_gain_get(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-    return 0;
-}
-
-static int msm8x10_wcd_ear_hac_gain_put(struct snd_kcontrol *kcontrol,
-				struct snd_ctl_elem_value *ucontrol)
-{
-    printk("msm8x10_wcd_ear_hac_gain_put %d\n", (int)ucontrol->value.integer.value[0]);
-    if (ucontrol->value.integer.value[0])
-	    msm8x10_enable_ear_hac_power_amp(1);
-	else
-	    msm8x10_enable_ear_hac_power_amp(0);
-	    
-    return 0;
-}
-
-#endif
 static int msm8x16_wcd_pa_gain_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -1741,12 +1670,6 @@ static const struct snd_kcontrol_new msm8x16_wcd_snd_controls[] = {
 
 	SOC_ENUM_EXT("EAR PA Gain", msm8x16_wcd_ear_pa_gain_enum[0],
 		msm8x16_wcd_pa_gain_get, msm8x16_wcd_pa_gain_put),
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-	
- 	SOC_SINGLE_BOOL_EXT("EAR HAC Switch", 0,
-		msm8x10_wcd_ear_hac_gain_get, msm8x10_wcd_ear_hac_gain_put),
-
-#endif
 	SOC_ENUM_EXT("Speaker Boost", msm8x16_wcd_spk_boost_ctl_enum[0],
 		msm8x16_wcd_spk_boost_get, msm8x16_wcd_spk_boost_set),
 
@@ -2628,11 +2551,7 @@ static int msm8x16_wcd_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		if (strnstr(w->name, internal1_text, 30)) {
-#ifdef CONFIG_TCT_8909_POP3/*TCTNB tianhongwei  for pop3  mic*/
-			//keep it null
-#else
 			snd_soc_update_bits(codec, micb_int_reg, 0x80, 0x80);
-#endif
 		} else if (strnstr(w->name, internal2_text, 30)) {
 			snd_soc_update_bits(codec, micb_int_reg, 0x10, 0x10);
 			snd_soc_update_bits(codec, w->reg, 0x60, 0x00);
@@ -3349,10 +3268,6 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"MIC BIAS Internal3", NULL, "INT_LDO_H"},
 	{"MIC BIAS External", NULL, "INT_LDO_H"},
 	{"MIC BIAS External2", NULL, "INT_LDO_H"},
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-
-	{"MIC BIAS External3", NULL, "INT_LDO_H"},
-#endif
 	{"MIC BIAS Internal1", NULL, "MICBIAS_REGULATOR"},
 	{"MIC BIAS Internal2", NULL, "MICBIAS_REGULATOR"},
 
@@ -3360,10 +3275,6 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	{"MIC BIAS External", NULL, "MICBIAS_REGULATOR"},
 	{"MIC BIAS External2", NULL, "MICBIAS_REGULATOR"},
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-
-	{"MIC BIAS External3", NULL, "MICBIAS_REGULATOR"},
-#endif
 };
 
 static int msm8x16_wcd_startup(struct snd_pcm_substream *substream,
@@ -4719,9 +4630,6 @@ static int msm8x16_wcd_spmi_probe(struct spmi_device *spmi)
 
 	dev_dbg(&spmi->dev, "%s(%d):slave ID = 0x%x\n",
 		__func__, __LINE__,  spmi->sid);
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-	msm8x10_ear_power_hac_init(&spmi->dev);
-#endif
 	modem_state = apr_get_modem_state();
 	if (modem_state != APR_SUBSYS_LOADED) {
 		dev_dbg(&spmi->dev, "Modem is not loaded yet %d\n",
