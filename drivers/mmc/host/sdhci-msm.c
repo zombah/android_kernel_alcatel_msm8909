@@ -370,20 +370,6 @@ enum vdd_io_level {
 	VDD_IO_SET_LEVEL,
 };
 
-//add by TCTSH richard.liang
-#if defined CONFIG_TCT_8909_PIXI355
-unsigned long pixi355_board_id = 0;
-static int __init pixi355_board_setup(char *str)
-{
-	unsigned long board_id;
-	if (!strict_strtoul(str, 0, &board_id))
-		pixi355_board_id = board_id;
-	return 1;
-}
-__setup("androidboot.BOARD_ID=", pixi355_board_setup);
-#endif
-//end richard.liang
-
 /* MSM platform specific tuning */
 static inline int msm_dll_poll_ck_out_en(struct sdhci_host *host,
 						u8 poll)
@@ -1536,26 +1522,9 @@ static struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev)
 		goto out;
 	}
 
-//add by SH richard.liang for dual SIM/SD card 2015.06.12
-#if defined CONFIG_TCT_8909_PIXI355
-      printk(KERN_NOTICE "=========== richard: pixi355_board_id = %ld \n", pixi355_board_id);
-      if(pixi355_board_id == 0 ||  pixi355_board_id == 1 )  //dual SIM/SD card
-      {
-          pdata->status_gpio = of_get_named_gpio_flags(np, "cd-gpios-2", 0, &flags);
-      }
-      else{  //single SD card
-          pdata->status_gpio = of_get_named_gpio_flags(np, "cd-gpios", 0, &flags);
-      }
-	printk(KERN_NOTICE "=========== richard: %s  cd-gpios = %d, flags = %d \n", __func__, pdata->status_gpio, flags);
-	if (gpio_is_valid(pdata->status_gpio) & !(flags & OF_GPIO_ACTIVE_LOW)){
-		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
-	}
-#else
 	pdata->status_gpio = of_get_named_gpio_flags(np, "cd-gpios", 0, &flags);
 	if (gpio_is_valid(pdata->status_gpio) & !(flags & OF_GPIO_ACTIVE_LOW))
 		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
-#endif
-//end richard.liang
 
 	of_property_read_u32(np, "qcom,bus-width", &bus_width);
 	if (bus_width == 8)
