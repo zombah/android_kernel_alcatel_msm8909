@@ -265,6 +265,7 @@ static struct usb_device_descriptor device_desc = {
 	.bDeviceClass         = USB_CLASS_PER_INTERFACE,
 	.idVendor             = __constant_cpu_to_le16(VENDOR_ID),
 	.idProduct            = __constant_cpu_to_le16(PRODUCT_ID),
+	.bcdDevice            = __constant_cpu_to_le16(0x0225),//[BUGFIX]-Mod by TCTNB.93391,07/02/2015,1035882,Change bcdDevice from 0xffff to 0x0225
 	.bNumConfigurations   = 1,
 };
 
@@ -1937,13 +1938,18 @@ static int mtp_function_ctrlrequest(struct android_usb_function *f,
 	return mtp_ctrlrequest(cdev, c);
 }
 
+//[BUGFIX]-Add-BEGIN PR:982132	
+#if 0
 static int ptp_function_ctrlrequest(struct android_usb_function *f,
 					struct usb_composite_dev *cdev,
 					const struct usb_ctrlrequest *c)
 {
 	return mtp_ctrlrequest(cdev, c);
 }
-
+#endif
+//[USB Driver]The icon is wrong when connecting MS with PC via USB cable and se
+//lect "PTP" connection type.
+//[BUGFIX]-Add-END
 
 static struct android_usb_function mtp_function = {
 	.name		= "mtp",
@@ -1959,7 +1965,13 @@ static struct android_usb_function ptp_function = {
 	.init		= ptp_function_init,
 	.cleanup	= ptp_function_cleanup,
 	.bind_config	= ptp_function_bind_config,
+//[BUGFIX]-Add-BEGIN PR:982132	
+#if 0
 	.ctrlrequest	= ptp_function_ctrlrequest,
+#endif
+//[USB Driver]The icon is wrong when connecting MS with PC via USB cable and se
+//lect "PTP" connection type.
+//[BUGFIX]-Add-END
 };
 
 /* rndis transport string */
@@ -2425,6 +2437,12 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		config->fsg.luns[config->fsg.nluns].removable = 0;
 		snprintf(name[config->fsg.nluns], MAX_LUN_NAME, "rom");
 		config->fsg.nluns++;
+		//[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+		#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+		is_cd_rom_inited = TRUE;
+		printk("lun0\n");
+		#endif
+		//[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
 	}
 
 	if (uicc_nluns > FSG_MAX_LUNS - config->fsg.nluns) {
@@ -3111,7 +3129,50 @@ functions_store(struct device *pdev, struct device_attribute *attr,
 		INIT_LIST_HEAD(&conf->enabled_functions);
 	}
 
+//[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+	strlcpy(function_buff, buff, sizeof(function_buff));
+
+	printk("is_power_off_charging:%d\n",is_power_off_charging);
+
+	//if(!remove_cd_rom_flag && is_cd_rom_inited)
+	if(!remove_cd_rom_flag && !is_power_off_charging && is_cd_rom_inited)
+	{
+		if(strstr(buff,"rndis"))
+		{
+			int value;
+			sscanf(idProduct_buff, "%04x\n", &value);
+			device_desc.idProduct = value;
+			strlcpy(buf, buff, sizeof(buf));
+		}
+               //[BUGFIX]-Add-BEGIN by TCTNB.Xiaoman.Wang,04/17/2014,653319, USB Accessory Test case fail
+		else if(strstr(buff,"accessory")) //CTS Accessory Test in Ubuntu
+		{
+			int value;
+			sscanf(idProduct_buff, "%04x\n", &value);
+			device_desc.idProduct = value;
+			strlcpy(buf, buff, sizeof(buf));
+		}
+               //[BUGFIX]-Add-END by TCTNB.Xiaoman.Wang
+	        else if(strstr(buff,"adb"))
+		{
+			strlcpy(buf, MASS_STORAGE_ADB_FUNCTION_STRING, sizeof(buf));
+		}
+		else
+		{
+			strlcpy(buf, MASS_STORAGE_ONLY_FUNCTION_STRING, sizeof(buf));
+		}
+	}
+	else
+	{
+		strlcpy(buf, buff, sizeof(buf));
+	}
+	printk("buff: %s\n",buff);
+	printk("buf: %s\n",buf);
+#else
 	strlcpy(buf, buff, sizeof(buf));
+#endif
+//[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
 	b = strim(buf);
 
 	dev->cdev->gadget->streaming_enabled = false;
@@ -3250,6 +3311,14 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 					f_holder->f->disable(f_holder->f);
 			}
 		dev->enabled = false;
+        //[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+		#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+		if(is_power_off_charging)
+			is_power_off_charging = FALSE;
+
+		printk("is_power_off_charging:%d\n",is_power_off_charging);
+		#endif
+        //[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
 	} else if (__ratelimit(&rl)) {
 		pr_err("android_usb: already %s\n",
 				dev->enabled ? "enabled" : "disabled");
@@ -3334,6 +3403,40 @@ field ## _store(struct device *pdev, struct device_attribute *attr,	\
 }									\
 static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
 
+//[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+#define DESCRIPTOR_ATTR_PRODUCT_ID(field, format_string)				\
+static ssize_t								\
+field ## _show(struct device *dev, struct device_attribute *attr,	\
+		char *buf)						\
+{									\
+	return snprintf(buf, PAGE_SIZE,					\
+			format_string, device_desc.field);		\
+}									\
+static ssize_t								\
+field ## _store(struct device *dev, struct device_attribute *attr,	\
+		const char *buf, size_t size)				\
+{									\
+	int value;							\
+	strlcpy(idProduct_buff, buf, sizeof(idProduct_buff));		\
+    if(!remove_cd_rom_flag && !is_power_off_charging && is_cd_rom_inited)				\
+	{									\
+		if (sscanf(MASS_STORAGE_ONLY_PID, format_string, &value) == 1) {			\
+			device_desc.field = value;				\
+			return size;						\
+		}\
+		return -1;\
+	}									\
+	if (sscanf(buf, format_string, &value) == 1) {			\
+		device_desc.field = value;				\
+		return size;						\
+	}								\
+	return -1;							\
+}									\
+static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
+#endif
+//[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+
 #define DESCRIPTOR_ATTR(field, format_string)				\
 static ssize_t								\
 field ## _show(struct device *dev, struct device_attribute *attr,	\
@@ -3376,7 +3479,13 @@ static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
 
 
 DESCRIPTOR_ATTR(idVendor, "%04x\n")
+//[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+DESCRIPTOR_ATTR_PRODUCT_ID(idProduct, "%04x\n")
+#else
 DESCRIPTOR_ATTR(idProduct, "%04x\n")
+#endif
+//[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
 DESCRIPTOR_ATTR(bcdDevice, "%04x\n")
 DESCRIPTOR_ATTR(bDeviceClass, "%d\n")
 DESCRIPTOR_ATTR(bDeviceSubClass, "%d\n")

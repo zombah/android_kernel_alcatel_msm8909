@@ -355,6 +355,39 @@ struct fsg_dev {
 	struct usb_ep		*bulk_out;
 };
 
+//[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+#define JRD_SCSI_1B 0x1b
+#define JRD_SCSI_06 0x06
+#define JRD_SCSI_BE 0xbe
+#define MASS_STORAGE_ONLY_FUNCTION_STRING "mass_storage"
+#define MASS_STORAGE_ADB_FUNCTION_STRING "mass_storage,adb"
+
+
+#define MASS_STORAGE_ONLY_PID "AF00"
+#define JRD_USB_SWITCH_DELAY 500 /*500ms*/
+
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+static u8 remove_cd_rom_flag = FALSE;
+static u8 is_cd_rom_inited = FALSE;
+static u8 is_power_off_charging = FALSE;
+
+
+static char function_buff[256];
+static char idProduct_buff[16];
+
+static void jrd_ms_do_switch_cb(struct work_struct *work);
+DECLARE_DELAYED_WORK(jrd_ms_do_switch_struct, jrd_ms_do_switch_cb);
+#endif
+//[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+
 static inline int __fsg_is_set(struct fsg_common *common,
 			       const char *func, unsigned line)
 {
@@ -554,7 +587,32 @@ static int fsg_setup(struct usb_function *f,
 				w_length != 1)
 			return -EDOM;
 		VDBG(fsg, "get max LUN\n");
-		*(u8 *)req->buf = fsg->common->nluns - 1;
+                //[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+		#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+                printk(KERN_ERR "CONFIG_JRD_CD_ROM_EMUM_EJECT enabled(Y)");
+                if((remove_cd_rom_flag || is_power_off_charging) && is_cd_rom_inited)
+                //if(remove_cd_rom_flag && is_cd_rom_inited) //wang xiaoman enable CDrom on poweroff charging mode
+                {
+                    *(u8 *)req->buf = 0;
+                }
+                else
+                {
+                    *(u8 *)req->buf = fsg->common->nluns - 1;
+                }
+                #else
+                printk(KERN_ERR "CONFIG_JRD_CD_ROM_EMUM_EJECT disabled(N)");
+                //[BUGFIX]-Add-BEGIN by TCTNB.93391,03/13/2015,942554,USB driver manual install
+                if (fsg->common->cdev->desc.idProduct == 0xAFF0)
+                {
+                    *(u8 *)req->buf = fsg->common->nluns - 1;
+                }
+                else
+                {
+                    *(u8 *)req->buf = 0;
+                }
+                //[BUGFIX]-Add-END by TCTNB.93391,03/13/2015,942554,USB driver manual install
+                #endif
+                //[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
 
 		/* Respond with data/status */
 		req->length = min((u16)1, w_length);
@@ -1944,6 +2002,116 @@ static int check_command_size_in_blocks(struct fsg_common *common,
 			mask, needs_medium, name);
 }
 
+//[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+#if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+static int jrd_file_write(const char *path, const char *value)
+{
+	struct file *fp = NULL;
+	int wrlen = 0;
+	int value_len = 0;
+	printk("value: %s\n", value);
+	fp=filp_open(path, O_WRONLY, 0);
+	if (!IS_ERR(fp))
+	{
+		value_len = strlen(value);
+		wrlen = fp->f_op->write(fp, value, value_len, &fp->f_pos);
+		if(filp_close(fp, NULL))
+		{
+			printk("close file %s error\n", path);
+		}
+		if(!wrlen)
+		{
+			printk("write file %s failed!\n", path);
+			return -1;
+		}
+	}
+	else
+        {
+		printk("open  file %s error!\n", path);
+		return -1;
+	}
+	return 0;
+}
+
+static int __init jrd_get_charging_state(char *s)
+{
+	printk("power_on_mode:%s\n",s);
+	if(!strncmp(s, "charger",strlen("charger")))
+	{
+		is_power_off_charging = TRUE;
+		printk("power off charging!\n");
+	}
+	return 0;
+}
+
+__setup("androidboot.mode=", jrd_get_charging_state);
+
+static void jrd_ms_do_switch_cb(struct work_struct *work)
+{
+	jrd_file_write("/sys/class/android_usb/android0/enable","0");
+	printk("functions: %s,string len: %d\n", function_buff, (int)strlen(function_buff));
+	jrd_file_write("/sys/class/android_usb/android0/functions",function_buff);
+	jrd_file_write("/sys/class/android_usb/android0/idProduct",idProduct_buff);
+	printk("remove_cd_rom_flag: %d\n", remove_cd_rom_flag);
+	jrd_file_write("/sys/class/android_usb/android0/enable","1");
+}
+
+static int jrd_do_scsi_command(struct fsg_common *common, struct fsg_buffhd	*bh)
+{
+	int reply = -EINVAL;
+	switch(common->cmnd[0])
+	{
+	  case JRD_SCSI_1B:
+	  case JRD_SCSI_06:
+	  {
+		u8	*buf = (u8 *) bh->buf;
+		if(JRD_SCSI_1B != common->cmnd[0])
+		{
+			memset(buf, 0x55, 192);
+			common->data_size_from_cmnd = 192;
+		}
+                remove_cd_rom_flag = TRUE;
+
+                schedule_delayed_work(&jrd_ms_do_switch_struct, JRD_USB_SWITCH_DELAY);
+                reply = common->data_size_from_cmnd;
+	  }
+	  break;
+          case JRD_SCSI_BE:
+	  {
+		u8	*buf = (u8 *) bh->buf;
+		if(JRD_SCSI_1B != common->cmnd[0])
+		{
+			memset(buf, 0x55, 192);
+			common->data_size_from_cmnd = 192;
+		}
+                remove_cd_rom_flag = TRUE;
+
+                schedule_delayed_work(&jrd_ms_do_switch_struct, 0);
+                reply = common->data_size_from_cmnd;
+	  }
+	  break;
+	}
+	return reply;
+}
+
+void jrd_enum_cdrom(void)
+{
+	if(remove_cd_rom_flag && is_cd_rom_inited)
+	{
+		remove_cd_rom_flag = FALSE;
+		if(strstr(function_buff,"rndis"))
+			return;
+		jrd_file_write("/sys/class/android_usb/android0/enable","0");
+		jrd_file_write("/sys/class/android_usb/android0/functions",function_buff);
+
+		jrd_file_write("/sys/class/android_usb/android0/idProduct",idProduct_buff);
+		jrd_file_write("/sys/class/android_usb/android0/enable","1");
+	}
+}
+EXPORT_SYMBOL(jrd_enum_cdrom);
+#endif
+//[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+
 static int do_scsi_command(struct fsg_common *common)
 {
 	struct fsg_buffhd	*bh;
@@ -2120,8 +2288,25 @@ static int do_scsi_command(struct fsg_common *common)
 		reply = check_command(common, 6, DATA_DIR_NONE,
 				      (1<<1) | (1<<4), 0,
 				      "START-STOP UNIT");
+            //[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+	    #if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+                if (reply == 0)
+		{
+			if(common->curlun->cdrom)
+			{
+				reply = jrd_do_scsi_command(common, bh);
+				if(reply == 0)
+					break;
+			}
+			reply = do_start_stop(common);
+		}
+		#else
 		if (reply == 0)
 			reply = do_start_stop(common);
+
+		printk("start stop reply: %d\n",reply);
+		#endif
+	    //[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
 		break;
 
 	case SYNCHRONIZE_CACHE:
@@ -2200,6 +2385,17 @@ static int do_scsi_command(struct fsg_common *common)
 
 	default:
 unknown_cmnd:
+        //[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+	    #if defined(CONFIG_JRD_CD_ROM_EMUM_EJECT) && !defined (FEATURE_TCTNB_MMITEST)
+		reply = jrd_do_scsi_command(common, bh);
+		if(reply >= 0)
+		{
+		  printk("jrd scsi command 0x%02x\n",common->cmnd[0]);
+		  break;
+		}
+		//printk("invalid scsi command 0x%02x\n", common->cmnd[0]);
+		#endif
+	    //[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
 		common->data_size_from_cmnd = 0;
 		sprintf(unknown, "Unknown x%02x", common->cmnd[0]);
 		reply = check_command(common, common->cmnd_size,

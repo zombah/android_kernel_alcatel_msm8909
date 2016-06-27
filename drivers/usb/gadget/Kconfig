@@ -1119,4 +1119,11 @@ config RMNET_SDIO_SMD_DATA_CHANNEL
        help
 	  Data SMD channel for transferring network data
 
+#[BUGFIX]-Add-BEGIN by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+config JRD_CD_ROM_EMUM_EJECT
+       tristate "Enable USB driver autoinstall"
+       help
+	  Control USB autoinstall
+#[BUGFIX]-Add-END by TCTNB.93391,07/02/2015,1035882,USB Driver Auto Install
+
 endif # USB_GADGET
