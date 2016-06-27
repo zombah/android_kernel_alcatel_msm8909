@@ -69,7 +69,7 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	int i = 0;
-
+	pr_info("Lcd module panel is off\n");
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		ret = -EINVAL;
@@ -87,6 +87,15 @@ static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 
 	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, false))
 		pr_debug("reset disable: pinctrl not enabled\n");
+
+/*add start sleep in mode. panel reset H-L-H 2015-7-13*/
+#if (defined CONFIG_TCT_8909_PIXI35 || defined CONFIG_TCT_8909_PIXI355)
+        gpio_set_value((ctrl_pdata->rst_gpio), 0);
+	msleep(20);
+        gpio_set_value((ctrl_pdata->rst_gpio), 1);
+        gpio_free(ctrl_pdata->rst_gpio);
+#endif
+/*add end sleep in mode. panel reset H-L-H 2015-7-13*/
 
 	if (ctrl_pdata->panel_bias_vreg) {
 		pr_debug("%s: Disabling panel bias vreg. ndx = %d\n",
@@ -121,7 +130,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	int i = 0;
-
+	pr_info("Lcd module panel is on\n");
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -590,6 +599,9 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_LINK_CLKS, 1);
 	mdss_dsi_sw_reset(ctrl_pdata, true);
 
+	if (mipi->init_delay)
+		usleep(mipi->init_delay);
+
 	/*
 	 * Issue hardware reset line after enabling the DSI clocks and data
 	 * data lanes for LP11 init
@@ -600,6 +612,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		mdss_dsi_panel_reset(pdata, 1);
 	}
 
+/* delay between LP11 and RST*/
 	if (mipi->init_delay)
 		usleep(mipi->init_delay);
 
@@ -673,8 +686,6 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 	return 0;
 }
 
-static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
-{
 	int ret = 0;
 	struct mipi_panel_info *mipi;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;

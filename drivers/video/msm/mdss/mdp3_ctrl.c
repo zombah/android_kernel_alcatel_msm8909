@@ -27,7 +27,7 @@
 #include "mdp3_ppp.h"
 
 #define VSYNC_EXPIRE_TICK	4
-
+bool is_alarm_boot = false;//add by stephen.wu for power off alarm
 static void mdp3_ctrl_pan_display(struct msm_fb_data_type *mfd);
 static int mdp3_overlay_unset(struct msm_fb_data_type *mfd, int ndx);
 static int mdp3_histogram_stop(struct mdp3_session_data *session,
@@ -909,6 +909,7 @@ static int mdp3_ctrl_off(struct msm_fb_data_type *mfd)
 	atomic_set(&mdp3_session->dma_done_cnt, 0);
 	mdp3_session->clk_on = 0;
 	mdp3_session->in_splash_screen = 0;
+	mdp3_res->solid_fill_vote_en = false;
 off_error:
 	mdp3_session->status = 0;
 	mdp3_bufq_deinit(&mdp3_session->bufq_out);
@@ -1226,8 +1227,14 @@ static int mdp3_ctrl_display_commit_kickoff(struct msm_fb_data_type *mfd,
 
 	mdp3_session->vsync_before_commit = 0;
 	if (!splash_done || mdp3_session->esd_recovery == true) {
-		if(panel && panel->set_backlight)
-			panel->set_backlight(panel, panel->panel_info.bl_max);
+/*modified begin by stephen.wu for power off alarm*/
+		if(panel && panel->set_backlight){
+			if(!is_alarm_boot)
+				panel->set_backlight(panel, panel->panel_info.bl_max);
+			else
+				panel->set_backlight(panel, 0);
+		}
+/*modified end by stephen.wu*/
 		splash_done = true;
 		mdp3_session->esd_recovery = false;
 	}
@@ -2588,3 +2595,18 @@ init_done:
 
 	return rc;
 }
+
+/*modify begin by stephen.wu for power off alarm*/
+static int __init alarm_boot(char *str)
+{
+    if(!str)
+         return 0;
+    if(!strcmp("1", str))
+		is_alarm_boot = true;
+    else
+		is_alarm_boot = false;
+    return 1;
+}
+
+__setup("androidboot.alarm=", alarm_boot);
+/*modify end by stephen.wu*/
