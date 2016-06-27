@@ -45,12 +45,20 @@
 				  SND_JACK_BTN_2 | SND_JACK_BTN_3 | \
 				  SND_JACK_BTN_4)
 #define OCP_ATTEMPT 1
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+#define HS_DETECT_PLUG_TIME_MS 2500
+#else
 #define HS_DETECT_PLUG_TIME_MS (3 * 1000)
+#endif
 #define SPECIAL_HS_DETECT_TIME_MS (2 * 1000)
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+#define MBHC_BUTTON_PRESS_THRESHOLD_MIN 2000 //JRD. modify for cancel hook key dected when headset plug in
+#else
 #define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
+#endif
 #define GND_MIC_SWAP_THRESHOLD 4
 #define WCD_FAKE_REMOVAL_MIN_PERIOD_MS 100
-#define HS_VREF_MIN_VAL 1400
+#define HS_VREF_MIN_VAL 1300 //JRD.Modify by xiaofeng.she@tcl.com
 #define FW_READ_ATTEMPTS 15
 #define FW_READ_TIMEOUT 4000000
 #define FAKE_REM_RETRY_ATTEMPTS 3
@@ -445,17 +453,19 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 	wg_time = snd_soc_read(codec, MSM8X16_WCD_A_ANALOG_RX_HPH_CNP_WG_TIME);
 	wg_time += 1;
 
-	/* If headphone PA is on, check if userspace receives
-	* removal event to sync-up PA's state */
-	if (wcd_mbhc_is_hph_pa_on(codec)) {
-		pr_debug("%s PA is on, setting PA_OFF_ACK\n", __func__);
-		set_bit(WCD_MBHC_HPHL_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
-		set_bit(WCD_MBHC_HPHR_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
-	} else {
-		pr_debug("%s PA is off\n", __func__);
-	}
-	snd_soc_update_bits(codec, MSM8X16_WCD_A_ANALOG_RX_HPH_CNP_EN,
-			    0x30, 0x00);
+	if (!snd_soc_dapm_get_pin_status(&codec->dapm, "Ext Spk")) {//Modified by li-peng@tcl.com, 2015/06/16, 15:59 for PR1014064
+		/* If headphone PA is on, check if userspace receives
+		* removal event to sync-up PA's state */
+		if (wcd_mbhc_is_hph_pa_on(codec)) {
+			pr_debug("%s PA is on, setting PA_OFF_ACK\n", __func__);
+			set_bit(WCD_MBHC_HPHL_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
+			set_bit(WCD_MBHC_HPHR_PA_OFF_ACK, &mbhc->hph_pa_dac_state);
+		} else {
+			pr_debug("%s PA is off\n", __func__);
+		}
+		snd_soc_update_bits(codec, MSM8X16_WCD_A_ANALOG_RX_HPH_CNP_EN,
+					0x30, 0x00);
+	}//Modified by li-peng@tcl.com, 2015/06/16, 15:59 for PR1014064
 	usleep_range(wg_time * 1000, wg_time * 1000 + 50);
 }
 
@@ -673,8 +683,8 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 	struct snd_soc_codec *codec = mbhc->codec;
 	WCD_MBHC_RSC_ASSERT_LOCKED(mbhc);
 
-	pr_debug("%s: enter insertion %d hph_status %x\n",
-		 __func__, insertion, mbhc->hph_status);
+	pr_debug("%s: enter insertion %d, jack_type=%d, hph_status %x\n",
+		 __func__, insertion, jack_type, mbhc->hph_status);
 	if (!insertion) {
 		/* Report removal */
 		mbhc->hph_status &= ~jack_type;
@@ -705,6 +715,9 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		hphrocp_off_report(mbhc, SND_JACK_OC_HPHR);
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
 		mbhc->current_plug = MBHC_PLUG_TYPE_NONE;
+	#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+		mbhc->jiffies_report_plugout = jiffies;
+	#endif
 	} else {
 		/*
 		 * Report removal of current jack type.
@@ -881,7 +894,8 @@ static bool wcd_check_cross_conn(struct wcd_mbhc *mbhc)
 	snd_soc_write(codec, MSM8X16_WCD_A_ANALOG_MBHC_DET_CTL_2, reg1);
 	pr_debug("%s: leave, plug type: %d\n", __func__,  plug_type);
 
-	return (plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP) ? true : false;
+	//return (plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP) ? true : false;
+	return false;
 }
 
 static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
@@ -1028,11 +1042,12 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 				 MSM8X16_WCD_A_ANALOG_MBHC_BTN_RESULT);
 		result2 = snd_soc_read(codec,
 				MSM8X16_WCD_A_ANALOG_MBHC_ZDET_ELECT_RESULT);
-		pr_debug("%s: result2 = %x\n", __func__, result2);
 
 		is_pa_on = snd_soc_read(codec,
 					MSM8X16_WCD_A_ANALOG_RX_HPH_CNP_EN) &
 					0x30;
+		pr_debug("%s: result1=%x, result2=%x,mbhc->current_plug=%d.is_pa_on=%d.\n", __func__, 
+			result1, result2, is_pa_on,	mbhc->current_plug);
 
 		/*
 		 * instead of hogging system by contineous polling, wait for
@@ -1219,6 +1234,7 @@ static void wcd_mbhc_detect_plug_type(struct wcd_mbhc *mbhc)
 			  MSM8X16_WCD_A_ANALOG_MBHC_BTN_RESULT);
 		result2 = snd_soc_read(codec,
 			  MSM8X16_WCD_A_ANALOG_MBHC_ZDET_ELECT_RESULT);
+		pr_debug("%s, %d. result1:%d, result2:%d.\n", __func__, __LINE__, result1, result2);
 
 		if (!result1 && !(result2 & 0x01))
 			plug_type = MBHC_PLUG_TYPE_HEADSET;
@@ -1400,6 +1416,9 @@ static int wcd_mbhc_get_button_mask(u16 btn)
 	case 0:
 		mask = SND_JACK_BTN_0;
 		break;
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+	//keep it null, only support one hook key
+#else
 	case 1:
 		mask = SND_JACK_BTN_1;
 		break;
@@ -1412,6 +1431,7 @@ static int wcd_mbhc_get_button_mask(u16 btn)
 	case 15:
 		mask = SND_JACK_BTN_4;
 		break;
+#endif
 	default:
 		break;
 	}
@@ -1687,14 +1707,22 @@ irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 		pr_debug("%s: Switch level is low ", __func__);
 		goto done;
 	}
-	mbhc->btn_press_intr = true;
+	//mbhc->btn_press_intr = true;
 
 	msec_val = jiffies_to_msecs(jiffies - mbhc->jiffies_atreport);
-	pr_debug("%s: msec_val = %ld\n", __func__, msec_val);
+	pr_debug("%s: msec_val = %ld, mbhc->current_plug=%d\n", __func__, msec_val,
+		mbhc->current_plug);
 	if (msec_val < MBHC_BUTTON_PRESS_THRESHOLD_MIN) {
 		pr_debug("%s: Too short, ignore button press\n", __func__);
 		goto done;
 	}
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+	if(mbhc->jiffies_atreport < mbhc->jiffies_report_plugout)
+	{
+		pr_debug("%s: last plugin jiffies, ignore button press\n", __func__);
+		goto done;
+	}
+#endif
 
 	/* If switch interrupt already kicked in, ignore button press */
 	if (mbhc->in_swch_irq_handler) {
@@ -1707,6 +1735,8 @@ irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 				__func__);
 		goto done;
 	}
+	mbhc->btn_press_intr = true;
+
 	result1 = snd_soc_read(codec, MSM8X16_WCD_A_ANALOG_MBHC_BTN_RESULT);
 	mask = wcd_mbhc_get_button_mask(result1);
 	mbhc->buttons_pressed |= mask;
@@ -1751,6 +1781,8 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 		goto exit;
 
 	}
+	pr_debug("%s, %d. mbhc->btn_press_intr=%d, mbhc->buttons_pressed=%d.\n", 
+		__func__, __LINE__, mbhc->btn_press_intr, mbhc->buttons_pressed);
 	if (mbhc->buttons_pressed & WCD_MBHC_JACK_BUTTON_MASK) {
 		ret = wcd_cancel_btn_work(mbhc);
 		if (ret == 0) {
@@ -1859,8 +1891,13 @@ static int wcd_mbhc_initialise(struct wcd_mbhc *mbhc)
 
 	snd_soc_update_bits(codec, MSM8X16_WCD_A_ANALOG_MBHC_DET_CTL_2,
 			0x01, 0x01);
-
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+	//Reduce Mechanical debounce from 256ms to 128ms.
+	//Increase button key debounce time form 16ms to 32ms 
+	snd_soc_write(codec, MSM8X16_WCD_A_ANALOG_MBHC_DBNC_TIMER, 0x7C);
+#else	
 	snd_soc_write(codec, MSM8X16_WCD_A_ANALOG_MBHC_DBNC_TIMER, 0x98);
+#endif	
 
 	/* enable MBHC clock */
 	snd_soc_update_bits(codec,
@@ -2198,6 +2235,10 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 		goto err_hphr_ocp_irq;
 	}
 
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+	mbhc->jiffies_atreport = 0;
+	mbhc->jiffies_report_plugout = 0;
+#endif
 	pr_debug("%s: leave ret %d\n", __func__, ret);
 	return ret;
 

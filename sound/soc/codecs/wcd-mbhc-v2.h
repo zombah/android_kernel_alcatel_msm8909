@@ -186,6 +186,9 @@ struct wcd_mbhc {
 	unsigned long hph_pa_dac_state;
 	unsigned long event_state;
 	unsigned long jiffies_atreport;
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TF)
+	unsigned long jiffies_report_plugout;
+#endif
 
 	/* impedance of hphl and hphr */
 	uint32_t zl, zr;

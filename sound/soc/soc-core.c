@@ -2145,6 +2145,7 @@ int snd_soc_update_bits(struct snd_soc_codec *codec, unsigned short reg,
 	unsigned int old, new;
 	int ret;
 
+	dev_dbg(codec->dev, "snd_soc_update_bits write %x = %x(mask:%x)\n", reg, value, mask);
 	if (codec->using_regmap) {
 		ret = regmap_update_bits_check(codec->control_data, reg,
 					       mask, value, &change);
