@@ -3978,6 +3978,20 @@ static int iris_vidioc_s_ctrl(struct file *file, void *priv,
 				radio->mode = FM_RECV;
 				iris_q_event(radio, IRIS_EVT_RADIO_READY);
 			}
+			    FMDERR("[Liang:] set SINR threshold to 4\n");
+				retval = hci_cmd(HCI_FM_GET_DET_CH_TH_CMD, radio->fm_hdev);
+				if (retval < 0) {
+					FMDERR("[Liang:] Failed to get chnl det thresholds  %d", retval);
+					goto END;
+				}
+				saved_val = radio->ch_det_threshold.sinr;
+				radio->ch_det_threshold.sinr = 4;
+				retval = hci_set_ch_det_thresholds_req(&radio->ch_det_threshold,radio->fm_hdev);
+				if (retval < 0) {
+					FMDERR("[Liang:] Failed to set SINR threshold %d", retval);
+					radio->ch_det_threshold.sinr = saved_val;
+					goto END;
+				}
 			break;
 		case FM_TRANS:
 			if (is_enable_tx_possible(radio) != 0) {
