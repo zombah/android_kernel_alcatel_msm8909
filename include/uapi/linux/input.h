@@ -476,14 +476,6 @@ struct input_keymap_entry {
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 
-/*+ Cedar.Tan add for Hall driver,20150422*/
-#define KEY_UNLOCK		249
-#if defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI355_TMO)
-#define KEY_UNLOCK_COVER        250     /* 250, for LED/window cover type, unlock  */
-#define KEY_LOCK_LED_COVER      251     /* 251, for LED cover type, lock  */
-#endif
-/*- Cedar.Tan add for Hall driver,20150422*/
-
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
 #define BTN_MISC		0x100
