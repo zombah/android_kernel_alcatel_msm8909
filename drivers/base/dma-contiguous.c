@@ -460,7 +460,8 @@ int __init dma_contiguous_reserve_area(phys_addr_t size, phys_addr_t *res_base,
 		dma_contiguous_early_fixup(base, size);
 	return 0;
 err:
-	pr_err("CMA: failed to reserve %ld MiB\n", (unsigned long)size / SZ_1M);
+//	pr_err("CMA: failed to reserve %ld MiB\n", (unsigned long)size / SZ_1M);
+	pr_err("CMA: failed to reserve %ld MiB, ret = %d\n", (unsigned long)size / SZ_1M, ret);
 	return ret;
 }
 
