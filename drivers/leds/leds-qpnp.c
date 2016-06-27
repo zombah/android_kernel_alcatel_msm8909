@@ -26,9 +26,7 @@
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-#include <linux/of_gpio.h>
-#endif
+
 #define WLED_MOD_EN_REG(base, n)	(base + 0x60 + n*0x10)
 #define WLED_IDAC_DLY_REG(base, n)	(WLED_MOD_EN_REG(base, n) + 0x01)
 #define WLED_FULL_SCALE_REG(base, n)	(WLED_IDAC_DLY_REG(base, n) + 0x01)
@@ -864,14 +862,10 @@ static int qpnp_wled_set(struct qpnp_led_data *led)
 
 static int qpnp_mpp_set(struct qpnp_led_data *led)
 {
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-	int rc, val;
-	int duty_us;
-#else
 	int rc;
 	u8 val;
 	int duty_us, duty_ns, period_us;
-#endif
+
 	if (led->cdev.brightness) {
 		if (led->mpp_cfg->mpp_reg && !led->mpp_cfg->enable) {
 			rc = regulator_set_voltage(led->mpp_cfg->mpp_reg,
@@ -910,7 +904,6 @@ static int qpnp_mpp_set(struct qpnp_led_data *led)
 			}
 		}
 		if (led->mpp_cfg->pwm_mode == PWM_MODE) {
-#ifndef CONFIG_TCT_8909_PIXI445_TF
 			/*config pwm for brightness scaling*/
 			period_us = led->mpp_cfg->pwm_cfg->pwm_period_us;
 			if (period_us > INT_MAX / NSEC_PER_USEC) {
@@ -933,44 +926,6 @@ static int qpnp_mpp_set(struct qpnp_led_data *led)
 					"configure pwm for new values\n");
 				goto err_mpp_reg_write;
 			}
-#else
-            pwm_disable(led->mpp_cfg->pwm_cfg->pwm_dev);
-
-			dev_info(&led->spmi_dev->dev,"mpp set use_blink:%d, cdev.brightness:%d ,pwm_period_us:%d\n",
-				   led->mpp_cfg->pwm_cfg->use_blink,
-				   led->cdev.brightness,
-				   led->mpp_cfg->pwm_cfg->pwm_period_us);
-
-			if( led->mpp_cfg->pwm_cfg->use_blink &&(led->cdev.brightness<LED_FULL)){
-				duty_us = led->cdev.blink_delay_on *1000;
-			}
-			else{
-
-				duty_us = (led->mpp_cfg->pwm_cfg->pwm_period_us *
-					led->cdev.brightness) / LED_FULL;
-			}
-
-			dev_info(&led->spmi_dev->dev,"mpp set duty_us:%d \n",duty_us);
-			if(led->mpp_cfg->pwm_cfg->use_blink&&(duty_us==led->mpp_cfg->pwm_cfg->pwm_period_us))
-			{
-				led->mpp_cfg->pwm_cfg->pwm_period_us =27;
-				duty_us =27;
-			}
-
-			rc = pwm_config_us(led->mpp_cfg->pwm_cfg->pwm_dev,
-					duty_us,
-					led->mpp_cfg->pwm_cfg->pwm_period_us);
-
-			dev_info(&led->spmi_dev->dev,"mpp set pwm_config_us(%d %d)\n",
-					duty_us,
-					led->mpp_cfg->pwm_cfg->pwm_period_us);
-
-			if (rc < 0) {
-				dev_err(&led->spmi_dev->dev, "Failed to " \
-					"configure pwm for new values\n");
-				return rc;
-			}
-#endif
 		}
 
 		if (led->mpp_cfg->pwm_mode != MANUAL_MODE)
@@ -1680,14 +1635,8 @@ static int qpnp_kpdbl_set(struct qpnp_led_data *led)
 					duty_us,
 					period_us);
 			} else {
-/* [PLATFORM]-mod-BEGIN by TCTNJ.xin.wei, 2014/6/30, increase pwm accuracy*/
-#ifdef CONFIG_TCT_8909_PIXI384G
-                                 duty_ns = ((period_us * NSEC_PER_USEC)* led->cdev.brightness) / KPDBL_MAX_LEVEL;
-#else
 				duty_ns = ((period_us * NSEC_PER_USEC) /
 					KPDBL_MAX_LEVEL) * led->cdev.brightness;
-#endif
-/* [PLATFORM]-mod-END by TCTNJ.xin.wei, 2015/6/30*/
 				rc = pwm_config(
 					led->kpdbl_cfg->pwm_cfg->pwm_dev,
 					duty_ns,
@@ -1867,16 +1816,11 @@ static void qpnp_led_set(struct led_classdev *led_cdev,
 		dev_err(&led->spmi_dev->dev, "Invalid brightness value\n");
 		return;
 	}
+
 	if (value > led->cdev.max_brightness)
 		value = led->cdev.max_brightness;
 
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-	if( value == 1 ){
-		led->cdev.brightness = 255;
-	}
-#else
 	led->cdev.brightness = value;
-#endif
 	if (led->in_order_command_processing)
 		queue_work(led->workqueue, &led->work);
 	else
@@ -2678,14 +2622,11 @@ restore:
 static void led_blink(struct qpnp_led_data *led,
 			struct pwm_config_data *pwm_cfg)
 {
-#ifndef CONFIG_TCT_8909_PIXI445_TF
 	int rc;
-#endif
 
 	flush_work(&led->work);
 	mutex_lock(&led->lock);
 	if (pwm_cfg->use_blink) {
-#ifndef CONFIG_TCT_8909_PIXI445_TF
 		if (led->cdev.brightness) {
 			pwm_cfg->blinking = true;
 			if (led->id == QPNP_ID_LED_MPP)
@@ -2721,18 +2662,6 @@ static void led_blink(struct qpnp_led_data *led,
 				dev_err(&led->spmi_dev->dev,
 				"KPDBL set brightness failed (%d)\n", rc);
 		}
-#else
-    if ( led->id == QPNP_ID_LED_MPP && led->mpp_cfg->pwm_mode == PWM_MODE ) {
-			pwm_cfg->blinking = true;
-			led->mpp_cfg->pwm_cfg->pwm_period_us =1000*(led->cdev.blink_delay_on+led->cdev.blink_delay_off);
-		} else {
-			pwm_cfg->blinking = false;
-			pwm_cfg->mode = pwm_cfg->default_mode;
-		}
-		pwm_free(pwm_cfg->pwm_dev);
-		qpnp_pwm_init(pwm_cfg, led->spmi_dev, led->cdev.name);
-		qpnp_led_set(&led->cdev, led->cdev.brightness);
-#endif
 	}
 	mutex_unlock(&led->lock);
 }
@@ -2750,36 +2679,8 @@ static ssize_t blink_store(struct device *dev,
 	if (ret)
 		return ret;
 	led = container_of(led_cdev, struct qpnp_led_data, cdev);
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-	if( blinking == 1 ){
-		led->cdev.blink_delay_on  = 15*100;
-		led->cdev.blink_delay_off = 30*100;
-	}else if( blinking == 2 ){
-		led->cdev.blink_delay_on  = 10*100;
-		led->cdev.blink_delay_off = 10*100;
-	}else if( blinking == 3 ){
-		led->cdev.blink_delay_on  = 5*100;
-		led->cdev.blink_delay_off = 5*100;
-	}else if( blinking == 0 ){
-		led->cdev.blink_delay_on  = 0;
-		led->cdev.blink_delay_off = 30*100;
-	}else{
-		dev_err(&led->spmi_dev->dev, "Invalid LED parameter for blink\n");
-		return -EINVAL;
-	}
-
-	//led->cdev.blink_delay_on = blinking*10;
-	//led->cdev.blink_delay_off = (led->cdev.max_brightness- blinking)*10;
-	led->cdev.brightness = blinking ? (led->cdev.max_brightness)* \
-		(led->cdev.blink_delay_on)/(led->cdev.blink_delay_on+led->cdev.blink_delay_off) : 0;
-	dev_info(&led->spmi_dev->dev,"blink_store blink_delay_on:%lu ,blink_delay_off:%lu, brightness:%d, blinking:%lu\n",
-		led->cdev.blink_delay_on,
-		led->cdev.blink_delay_off,
-		led->cdev.brightness ,
-		blinking);
-#else
 	led->cdev.brightness = blinking ? led->cdev.max_brightness : 0;
-#endif
+
 	switch (led->id) {
 	case QPNP_ID_LED_MPP:
 		led_blink(led, led->mpp_cfg->pwm_cfg);
@@ -2798,6 +2699,7 @@ static ssize_t blink_store(struct device *dev,
 	}
 	return count;
 }
+
 static DEVICE_ATTR(led_mode, 0664, NULL, led_mode_store);
 static DEVICE_ATTR(strobe, 0664, NULL, led_strobe_type_store);
 static DEVICE_ATTR(pwm_us, 0664, NULL, pwm_us_store);
@@ -3537,11 +3439,8 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 
 	pwm_cfg->use_blink =
 		of_property_read_bool(node, "qcom,use-blink");
-#ifdef CONFIG_TCT_8909_PIXI445_TF
-if (pwm_cfg->mode == LPG_MODE){
-#else
+
 	if (pwm_cfg->mode == LPG_MODE || pwm_cfg->use_blink) {
-#endif
 		pwm_cfg->duty_cycles =
 			devm_kzalloc(&spmi_dev->dev,
 			sizeof(struct pwm_duty_cycles), GFP_KERNEL);
@@ -3911,6 +3810,7 @@ static int qpnp_get_config_mpp(struct qpnp_led_data *led,
 		led->mpp_cfg->pwm_cfg->default_mode = led_mode;
 	} else
 		return rc;
+
 	rc = qpnp_get_config_pwm(led->mpp_cfg->pwm_cfg, led->spmi_dev, node);
 	if (rc < 0)
 		goto err_config_mpp;
@@ -4158,12 +4058,11 @@ static int qpnp_leds_probe(struct spmi_device *spmi)
 					&blink_attr_group);
 				if (rc)
 					goto fail_id_check;
-#ifndef CONFIG_TCT_8909_PIXI445_TF
+
 				rc = sysfs_create_group(&led->cdev.dev->kobj,
 					&lpg_attr_group);
 				if (rc)
 					goto fail_id_check;
-#endif
 			} else if (led->mpp_cfg->pwm_cfg->mode == LPG_MODE) {
 				rc = sysfs_create_group(&led->cdev.dev->kobj,
 					&lpg_attr_group);

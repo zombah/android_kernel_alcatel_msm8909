@@ -1,10 +1,4 @@
 
-ifeq ($(TARGET_PRODUCT),pixi355_tmo)
-KBUILD_CFLAGS += -DCONFIG_TCT_8909_PIXI355_TMO
-endif
-ifeq ($(TARGET_PRODUCT),pixi355_tf)
-KBUILD_CFLAGS += -DCONFIG_TCT_8909_PIXI355_TF
-endif
 # LED Core
 obj-$(CONFIG_NEW_LEDS)			+= led-core.o
 obj-$(CONFIG_LEDS_CLASS)		+= led-class.o
@@ -70,10 +64,6 @@ obj-$(CONFIG_LEDS_AW2013)		+= leds-aw2013.o
 
 # LED SPI Drivers
 obj-$(CONFIG_LEDS_DAC124S085)		+= leds-dac124s085.o
-
-#[PLATFORM]-Add-BEGIN by TCTNB.YJ, for pop3 flash led driver.
-obj-$(CONFIG_TCT_8909_POP3)		+= leds-sgm3141.o
-#[PLATFORM]-Mod-END by TCTNB.YJ
 
 # LED Triggers
 obj-$(CONFIG_LEDS_TRIGGERS)		+= trigger/
