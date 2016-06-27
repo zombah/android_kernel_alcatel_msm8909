@@ -16,6 +16,11 @@ obj-$(CONFIG_GPIO_ADP5520)	+= gpio-adp5520.o
 obj-$(CONFIG_GPIO_ADP5588)	+= gpio-adp5588.o
 obj-$(CONFIG_GPIO_AMD8111)	+= gpio-amd8111.o
 obj-$(CONFIG_GPIO_ARIZONA)	+= gpio-arizona.o
+
+#[PLATFORM]-add by TCTNB.Bin.SU,2015/05/19,PR1003024,for BOARD ID status
+obj-$(CONFIG_GPIO_BOARD_ID_STATUS) += gpio-board-id-status.o
+#[PLATFORM]-Add-END by TCTNB.Bin.SU
+
 obj-$(CONFIG_GPIO_BT8XX)	+= gpio-bt8xx.o
 obj-$(CONFIG_GPIO_CLPS711X)	+= gpio-clps711x.o
 obj-$(CONFIG_GPIO_CS5535)	+= gpio-cs5535.o
@@ -89,3 +94,6 @@ obj-$(CONFIG_GPIO_WM8994)	+= gpio-wm8994.o
 obj-$(CONFIG_GPIO_XILINX)	+= gpio-xilinx.o
 obj-$(CONFIG_MSM_SMP2P)		+= gpio-msm-smp2p.o
 obj-$(CONFIG_MSM_SMP2P_TEST)	+= gpio-msm-smp2p-test.o
+#[PLATFORM]-Add-BEGIN by TCTNB.ZXZ,FR-1004716 2015/05/19 add for NPI_DOWN status
+obj-$(CONFIG_GPIO_NPI_DOWN_STATUS)      += gpio-npi-down-status.o
+#[PLATFORM]-Add-END by TCTNB.ZXZ
