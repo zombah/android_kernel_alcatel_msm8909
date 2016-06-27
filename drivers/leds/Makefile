@@ -8,6 +8,9 @@ obj-$(CONFIG_LEDS_TRIGGERS)		+= led-triggers.o
 obj-$(CONFIG_LEDS_88PM860X)		+= leds-88pm860x.o
 obj-$(CONFIG_LEDS_ATMEL_PWM)		+= leds-atmel-pwm.o
 obj-$(CONFIG_LEDS_BD2802)		+= leds-bd2802.o
+# [PLATFORM]-Add-BEGIN by TCTNB.XQJ, RR-876676, 2015/01/13, add for pop3 led
+obj-$(CONFIG_LEDS_SN31XX)		+= leds-sn31xx.o
+# [PLATFORM]-Add-END by TCTNB.FLF
 obj-$(CONFIG_LEDS_LOCOMO)		+= leds-locomo.o
 obj-$(CONFIG_LEDS_LM3530)		+= leds-lm3530.o
 obj-$(CONFIG_LEDS_LM3533)		+= leds-lm3533.o

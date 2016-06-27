@@ -944,7 +944,17 @@ static int qpnp_mpp_set(struct qpnp_led_data *led)
 			}
 
 			val = (led->cdev.brightness / LED_MPP_CURRENT_MIN) - 1;
-
+                /*liyifan start, the CTP backlight current value setting based on the mpp cfg current value, PR982080,20150612*/
+		#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355)	
+			// Button backlight was on-off status, don't charge the current value at PIXI35.
+			pr_debug("name:%s val:%d\n", led->cdev.name, val);
+			if(strncmp(led->cdev.name, "button-backlight", 16) == 0)//(led->cdev.name[1] == 'u')
+			{
+				val = (led->mpp_cfg->current_setting / LED_MPP_CURRENT_MIN) - 1;
+			}
+			pr_debug("name:%s val:%d current_setting:%d.\n", led->cdev.name, val, led->mpp_cfg->current_setting);
+		#endif		
+                /*liyifan end, the CTP backlight current value setting based on the mpp cfg current value, PR982080,20150612*/
 			rc = qpnp_led_masked_write(led,
 					LED_MPP_SINK_CTRL(led->base),
 					LED_MPP_SINK_MASK, val);
