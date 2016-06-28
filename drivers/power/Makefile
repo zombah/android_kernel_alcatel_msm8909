@@ -1,5 +1,21 @@
 ccflags-$(CONFIG_POWER_SUPPLY_DEBUG) := -DDEBUG
 
+ifeq ($(JRD_FAKE_BATTERY_SUPPORT), true)
+KBUILD_CFLAGS += -DFEATURE_TCTSH_FAKE_BATTERY_FOR_CERT
+endif
+
+ifeq ($(TARGET_BUILD_VARIANT), user)
+KBUILD_CFLAGS += -DDISABLE_PR_DEBUG_LOG
+endif
+
+ifeq ($(TARGET_BUILD_MMITEST), true)
+KBUILD_CFLAGS += -DFEATURE_TCTSH_MMITEST
+endif
+
+ifeq ($(JRD_FIX_BATTERY_TEMPERATURE), true)
+KBUILD_CFLAGS += -DFEATURE_TCTSH_FIX_BATTERY_TEMPERATURE
+endif
+
 power_supply-y				:= power_supply_core.o
 power_supply-$(CONFIG_SYSFS)		+= power_supply_sysfs.o
 power_supply-$(CONFIG_LEDS_TRIGGERS)	+= power_supply_leds.o
@@ -60,9 +76,25 @@ obj-$(CONFIG_BATTERY_BQ28400)	+= bq28400_battery.o
 obj-$(CONFIG_SMB137C_CHARGER)	+= smb137c-charger.o
 obj-$(CONFIG_QPNP_BMS)		+= qpnp-bms.o batterydata-lib.o
 obj-$(CONFIG_QPNP_VM_BMS)	+= qpnp-vm-bms.o batterydata-lib.o batterydata-interface.o
+#[BUFFIX]-Add- Begin by TCTNB.FLF,PR-1022650, 2015/6/11,Battery display 0 and powered down after powerup
+ifeq ($(TARGET_PRODUCT),pixi37)
+obj-$(CONFIG_QPNP_VM_BMS)	+= qpnp-vm-bms.o batterydata-lib.o batterydata-interface.o
+endif
+#[BUFFIX]-End-by TCTNB.FLF
+ifeq ($(TARGET_PRODUCT),pixi384g)
+obj-$(CONFIG_QPNP_VM_BMS)	+= qpnp-vm-bms.o batterydata-lib.o batterydata-interface.o
+endif
 obj-$(CONFIG_QPNP_FG)		+= qpnp-fg.o
 obj-$(CONFIG_QPNP_CHARGER)	+= qpnp-charger.o
 obj-$(CONFIG_QPNP_LINEAR_CHARGER)	+= qpnp-linear-charger.o
+#[BUFFIX]-Add- Begin by TCTNB.FLF,PR-1022650, 2015/6/11,Battery display 0 and powered down after powerup
+ifeq ($(TARGET_PRODUCT),pixi37)
+obj-$(CONFIG_QPNP_LINEAR_CHARGER)	+= qpnp-linear-charger.o
+endif
+#[BUFFIX]-End-by TCTNB.FLF
+ifeq ($(TARGET_PRODUCT),pixi384g)
+obj-$(CONFIG_QPNP_LINEAR_CHARGER)	+= qpnp-linear-charger.o
+endif
 obj-$(CONFIG_QPNP_SMBCHARGER)	+= qpnp-smbcharger.o
 obj-$(CONFIG_CHARGER_SMB347)	+= smb347-charger.o
 obj-$(CONFIG_CHARGER_TPS65090)	+= tps65090-charger.o

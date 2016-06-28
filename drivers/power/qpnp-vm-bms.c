@@ -37,6 +37,7 @@
 #include <linux/batterydata-interface.h>
 #include <linux/qpnp-revid.h>
 #include <uapi/linux/vm_bms.h>
+#include <linux/batterydata-lib.h> //[PLATFORM]-Add by TCTSZ.leo.guo,2015/06/17, Fixed TCL 4060mAh battery data as default.
 
 #define _BMS_MASK(BITS, POS) \
 	((unsigned char)(((1 << (BITS)) - 1) << (POS)))
@@ -118,10 +119,20 @@
 #define CV_DROP_MARGIN			10000
 #define MIN_OCV_UV			2000000
 #define TIME_PER_PERCENT_UUC		60
-#define IAVG_SAMPLES			16
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2015/07/20, fixed battery curve parameter.
+#ifdef CONFIG_TCT_8909_PIXI384G
+#define IAVG_SAMPLES                    8
+#else
+#define IAVG_SAMPLES                    16
+#endif
+//[FixBug]-Add-END by TCTSZ.leo.guo,2015/07/20.
 #define MIN_SOC_UUC			3
 
 #define QPNP_VM_BMS_DEV_NAME		"qcom,qpnp-vm-bms"
+
+#if defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI445_TF)
+#define JRD_CHECK_CHARGING_FULL_FOR_PIXI355
+#endif
 
 /* indicates the state of BMS */
 enum {
@@ -478,9 +489,30 @@ static int calculate_delta_time(unsigned long *time_stamp, int *delta_time_s)
 	return 0;
 }
 
+#define CHG_PRES_BIT BIT(7)
 static bool is_charger_present(struct qpnp_bms_chip *chip)
 {
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2015/02/12, Fixed the gap on battery percentage indicator.
+#ifdef CONFIG_TCT_8909_PIXI384G
+	int rc;
+	u8 chg_pres;
+#endif
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2014/12/19.
 	union power_supply_propval ret = {0,};
+
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2015/02/12, Fixed the gap on battery percentage indicator.
+#ifdef CONFIG_TCT_8909_PIXI384G
+	if (chip->chg_pres_addr) {
+		rc = qpnp_read_wrapper(chip, &chg_pres,
+				chip->chg_pres_addr, 1);
+		if (!rc && (chg_pres & CHG_PRES_BIT))
+			return true;
+		else
+			return false;
+	}
+#endif
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2014/12/19.
+
 
 	if (chip->usb_psy == NULL)
 		chip->usb_psy = power_supply_get_by_name("usb");
@@ -1205,8 +1237,15 @@ static int get_battery_status(struct qpnp_bms_chip *chip)
 		chip->batt_psy = power_supply_get_by_name("battery");
 	if (chip->batt_psy) {
 		/* if battery has been registered, use the status property */
+/* [PLATFORM]-Mod-BEGIN by TCTNB.FLF, PR-1017864, 2015/06/16, fix capacity drops after charging full */
+#if (defined CONFIG_TCT_8909_PIXI37 || defined JRD_CHECK_CHARGING_FULL_FOR_PIXI355)
+		chip->batt_psy->get_property(chip->batt_psy,
+					POWER_SUPPLY_PROP_BATT_STATUS, &ret);
+#else
 		chip->batt_psy->get_property(chip->batt_psy,
 					POWER_SUPPLY_PROP_STATUS, &ret);
+#endif
+/* [PLATFORM]-Mod-END by TCTNB.FLF */
 		return ret.intval;
 	}
 
@@ -1219,6 +1258,13 @@ static int get_batt_therm(struct qpnp_bms_chip *chip, int *batt_temp)
 {
 	int rc;
 	struct qpnp_vadc_result result;
+
+/* [PLATFORM]-Mod-BEGIN by TCTSZ.leo.guo,2015.05.12  disable tem check for mini */
+#ifdef FEATURE_TCTNB_MMITEST
+		*batt_temp = BMS_DEFAULT_TEMP;
+		return 0;
+#endif
+/* [PLATFORM]-Mod-END by TCTSZ.leo.guo */
 
 	rc = qpnp_vadc_read(chip->vadc_dev, LR_MUX1_BATT_THERM, &result);
 	if (rc) {
@@ -1412,11 +1458,24 @@ static int report_eoc(struct qpnp_bms_chip *chip)
 	if (chip->batt_psy == NULL)
 		chip->batt_psy = power_supply_get_by_name("battery");
 	if (chip->batt_psy) {
+/* [PLATFORM]-Mod-BEGIN by TCTNB.FLF, PR-1017864, 2015/06/16, fix capacity drops after charging full */
+#if (defined CONFIG_TCT_8909_PIXI37 || defined JRD_CHECK_CHARGING_FULL_FOR_PIXI355)
+		rc = chip->batt_psy->get_property(chip->batt_psy,
+				POWER_SUPPLY_PROP_BATT_STATUS, &ret);
+#else
 		rc = chip->batt_psy->get_property(chip->batt_psy,
 				POWER_SUPPLY_PROP_STATUS, &ret);
+#endif
+/* [PLATFORM]-Mod-END by TCTNB.FLF */
+
 		if (rc) {
 			pr_err("Unable to get battery 'STATUS' rc=%d\n", rc);
-		} else if (ret.intval != POWER_SUPPLY_STATUS_FULL) {
+		} else if (ret.intval != POWER_SUPPLY_STATUS_FULL
+		#ifdef CONFIG_TCT_8909_PIXI384G
+						&& chip->last_ocv_uv >= 4322000) {
+		#else
+						&& chip->last_ocv_uv >= 4340000) {
+		#endif
 			pr_debug("Report EOC to charger\n");
 			ret.intval = POWER_SUPPLY_STATUS_FULL;
 			rc = chip->batt_psy->set_property(chip->batt_psy,
@@ -1500,6 +1559,11 @@ static void check_eoc_condition(struct qpnp_bms_chip *chip)
 					 */
 					chip->ocv_at_100 = chip->last_ocv_uv;
 					pr_debug("Battery FULL\n");
+/* [PLATFORM]-Add-BEGIN by TCTNB.FLF, FR-837171, 2014/11/14, add log for charger autotest */
+#ifdef CONFIG_TCT_8X16_COMMON
+					pr_err("TCTNB_FULL Battery FULL\n");
+#endif
+/* [PLATFORM]-Mod-END by TCTNB.FLF */
 				} else {
 					pr_err("Unable to report eoc rc=%d\n",
 							rc);
@@ -1674,6 +1738,9 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 					/ SOC_CHANGE_PER_SEC);
 
 		if (chip->last_soc_unbound) {
+			if(soc >= 80){
+				soc_change = min(1, soc_change);
+			}
 			chip->last_soc_unbound = false;
 		} else {
 			/*
@@ -1681,6 +1748,10 @@ static int report_vm_bms_soc(struct qpnp_bms_chip *chip)
 			 * only change reported SoC by 1.
 			 */
 			soc_change = min(1, soc_change);
+		}
+
+		if ((chip->last_soc == 100) && (soc == 99) && !charging) {
+			soc_change = min(0, soc_change);
 		}
 
 		if (soc < chip->last_soc && soc != 0)
@@ -2124,10 +2195,15 @@ static void monitor_soc_work(struct work_struct *work)
 	 * schedule the work only if last_soc has not caught up with
 	 * the calculated soc or if we are using voltage based soc
 	 */
+#if defined(CONFIG_TCT_FCC_TEST_SUPPORT)
+    schedule_delayed_work(&chip->monitor_soc_work,
+	        msecs_to_jiffies(1000));
+#else
 	if ((chip->last_soc != chip->calculated_soc) ||
 					chip->dt.cfg_use_voltage_soc)
 		schedule_delayed_work(&chip->monitor_soc_work,
 			msecs_to_jiffies(get_calculation_delay_ms(chip)));
+#endif
 
 	if (chip->reported_soc_in_use && chip->charger_removed_since_full
 				&& !chip->charger_reinserted) {
@@ -2861,12 +2937,27 @@ static void adjust_pon_ocv(struct qpnp_bms_chip *chip, int batt_temp)
 
 		chip->last_ocv_uv += delta_uv;
 	}
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2015/02/12, Fixed the gap on battery percentage indicator.
+#ifdef CONFIG_TCT_8909_PIXI384G
+	{
+		int voltage_uv;
+		pr_crit("PON OCV before adjust: %d.\n", chip->last_ocv_uv);
+		voltage_uv = is_charger_present(chip) ? estimate_ocv(chip) : estimate_ocv(chip) + delta_uv;
+		chip->last_ocv_uv = (abs(voltage_uv - chip->last_ocv_uv) < abs(voltage_uv - chip->shutdown_ocv)) ? chip->last_ocv_uv : chip->shutdown_ocv;
+		pr_crit("PON OCV after adjust: %d, ADC get battery voltage:%d.\n", chip->last_ocv_uv, voltage_uv);
+	}
+#endif
+//[FixBug]-Add-END by TCTSZ.leo.guo,2015/01/09
 }
 
 static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 {
 	int rc, batt_temp = 0, est_ocv = 0;
-
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2015/02/12, Fixed the gap on battery percentage indicator.
+#ifdef CONFIG_TCT_8909_PIXI384G
+    int delta_soc = is_charger_present(chip) ? 30 : 0;
+#endif
+//[FixBug]-Add-END by TCTSZ.leo.guo,2014/12/19.
 	rc = get_batt_therm(chip, &batt_temp);
 	if (rc < 0) {
 		pr_err("Unable to read batt temp, using default=%d\n",
@@ -2922,7 +3013,13 @@ static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 					chip->last_ocv_uv, batt_temp);
 		if (!chip->shutdown_soc_invalid &&
 			(abs(chip->shutdown_soc - chip->calculated_soc) <
+//[FixBug]-Add-BGEIN by TCTSZ.leo.guo,2015/02/12, Fixed the gap on battery percentage indicator.
+#ifdef CONFIG_TCT_8909_PIXI384G
+				(chip->dt.cfg_shutdown_soc_valid_limit + delta_soc))) {
+#else
 				chip->dt.cfg_shutdown_soc_valid_limit)) {
+#endif
+//[FixBug]-Add-END by TCTSZ.leo.guo,2014/12/19.
 			chip->last_ocv_uv = chip->shutdown_ocv;
 			chip->last_soc = chip->shutdown_soc;
 			chip->calculated_soc = lookup_soc_ocv(chip,
@@ -2936,7 +3033,7 @@ static int calculate_initial_soc(struct qpnp_bms_chip *chip)
 	/* store the start-up OCV for voltage-based-soc */
 	chip->voltage_soc_uv = chip->last_ocv_uv;
 
-	pr_info("warm_reset=%d est_ocv=%d  shutdown_soc_invalid=%d shutdown_ocv=%d shutdown_soc=%d last_soc=%d calculated_soc=%d last_ocv_uv=%d\n",
+	pr_crit("warm_reset=%d est_ocv=%d  shutdown_soc_invalid=%d shutdown_ocv=%d shutdown_soc=%d last_soc=%d calculated_soc=%d last_ocv_uv=%d\n",
 		chip->warm_reset, est_ocv, chip->shutdown_soc_invalid,
 		chip->shutdown_ocv, chip->shutdown_soc, chip->last_soc,
 		chip->calculated_soc, chip->last_ocv_uv);
@@ -3448,6 +3545,35 @@ static int set_battery_data(struct qpnp_bms_chip *chip)
 	int rc = 0;
 	struct bms_battery_data *batt_data;
 	struct device_node *node;
+//[PLATFORM]-Add-BGEIN by TCTSZ.leo.guo,2015/06/17, Fixed TCL 4060mAh battery data as default.
+#define BATTERY_SCUD_ID_MIN_UV    1000000
+#define BATTERY_SCUD_ID_MAX_UV	  1300000//1800000
+//[PLATFORM]-Add-BGEIN by TCTSZ.leo.guo,2015/07/20, Fixed TCL 4060mAh battery data as default.
+#ifdef CONFIG_TCT_8909_PIXI384G
+	//batt_data = &TCL4060jn_4060mAh_data;
+	battery_id = read_battery_id(chip);
+	if (battery_id < 0) {
+		pr_err("cannot read battery id err = %lld\n", battery_id);
+		return battery_id;
+	}
+	if((battery_id > BATTERY_SCUD_ID_MIN_UV) && (battery_id < BATTERY_SCUD_ID_MAX_UV)){
+		pr_crit("Using SCUD 4060mAh battery as default.\n");
+		batt_data = &TCL4060scud_4060mAh_data;
+	}
+	else{
+		pr_crit("Using JN 4060mAh battery as default.\n");
+		batt_data = &TCL4060jn_4060mAh_data;
+	}
+
+	if(!batt_data){
+		pr_err("No available batterydata\n");
+		return -EINVAL;
+	}
+	chip->batt_data = batt_data;
+
+	return 0;
+#endif
+//[PLATFORM]-Add-END by TCTSZ.leo.guo,2015/06/20
 
 	battery_id = read_battery_id(chip);
 	if (battery_id < 0) {
@@ -3607,6 +3733,27 @@ do {									\
 		chip->dt.chip_prop = -EINVAL;				\
 } while (0)
 
+#if defined(CONFIG_TCT_SMB1360_AND_PM8909_CHARGER)
+#define CHG_OPTION_REG				0x1008
+#define CHG_OPTION_MASK				BIT(7)
+static bool get_chg_option(struct qpnp_bms_chip *chip)
+{
+	int rc;
+	u8 reg_val;
+
+	/*
+	 * Read the chg option register.
+	 */
+	rc = qpnp_read_wrapper(chip, &reg_val, CHG_OPTION_REG, 1);
+	if (rc) {
+		pr_err("Unable to read CHG_OPTION_REG rc=%d\n", rc);
+		return rc;
+	}
+	pr_err("charger option rt status %x\n", reg_val);
+
+	return (reg_val & CHG_OPTION_MASK) ? 1 : 0;
+}
+#endif
 static int parse_bms_dt_properties(struct qpnp_bms_chip *chip)
 {
 	int rc = 0;
@@ -3663,8 +3810,12 @@ static int parse_bms_dt_properties(struct qpnp_bms_chip *chip)
 			chip->spmi->dev.of_node, "qcom,force-s3-on-suspend");
 	chip->dt.cfg_report_charger_eoc = of_property_read_bool(
 			chip->spmi->dev.of_node, "qcom,report-charger-eoc");
+#if defined(CONFIG_TCT_SMB1360_AND_PM8909_CHARGER)
+	chip->dt.cfg_disable_bms = !get_chg_option(chip);
+#else	
 	chip->dt.cfg_disable_bms = of_property_read_bool(
 			chip->spmi->dev.of_node, "qcom,disable-bms");
+#endif	
 	chip->dt.cfg_force_bms_active_on_charger = of_property_read_bool(
 			chip->spmi->dev.of_node,
 			"qcom,force-bms-active-on-charger");

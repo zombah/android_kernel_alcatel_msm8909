@@ -195,6 +195,26 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(temp_alert_max),
 	POWER_SUPPLY_ATTR(temp_cool),
 	POWER_SUPPLY_ATTR(temp_warm),
+/* [PLATFORM]-Add-BEGIN by TCTNB.FLF, FR-996156, 2015/05/27, add temperature protection */
+#ifdef CONFIG_TCT_8909_PIXI37
+	POWER_SUPPLY_ATTR(temp_cold),
+	POWER_SUPPLY_ATTR(temp_overheat),
+/* [PLATFORM]-Mod-BEGIN by TCTNB.FLF, PR-1017864, 2015/06/16, fix capacity drops after charging full */
+	POWER_SUPPLY_ATTR(batt_status),
+/* [PLATFORM]-Mod-END by TCTNB.FLF */
+#endif
+/* [PLATFORM]-Add-END by TCTNB.FLF */
+#ifdef CONFIG_TCT_8909_PIXI384G
+	POWER_SUPPLY_ATTR(temp_cold),
+	POWER_SUPPLY_ATTR(temp_overheat),
+#endif
+#if defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI445_TF)
+	POWER_SUPPLY_ATTR(temp_cold),
+	POWER_SUPPLY_ATTR(temp_over_37),
+	POWER_SUPPLY_ATTR(temp_over_42),
+	POWER_SUPPLY_ATTR(temp_overheat),
+	POWER_SUPPLY_ATTR(batt_status),
+#endif
 	POWER_SUPPLY_ATTR(temp_ambient),
 	POWER_SUPPLY_ATTR(temp_ambient_alert_min),
 	POWER_SUPPLY_ATTR(temp_ambient_alert_max),
