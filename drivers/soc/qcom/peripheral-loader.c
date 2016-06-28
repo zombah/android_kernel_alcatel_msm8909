@@ -134,6 +134,64 @@ struct pil_priv {
 	size_t region_size;
 };
 
+// add for modem check error flag write to kernel, kobj, FR 997536
+static int modem_img_check = 2;
+static ssize_t modem_img_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+        return sprintf(buf, "%d\n", modem_img_check);
+}
+static ssize_t modem_img_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+        sscanf(buf, "%du", &modem_img_check);
+        return count;
+}
+static struct kobj_attribute modem_img_attribute = __ATTR(modem_img, 0664, modem_img_show, modem_img_store);
+
+/*
+ * Create a group of attributes so that we can create and destroy them all
+ * at once.
+ */
+static struct attribute * modem_img_attrs[] = {
+        &modem_img_attribute.attr,
+        NULL,       /* need to NULL terminate the list of attributes */
+};
+/*
+ * An unnamed attribute group will put all of the attributes directly in
+ * the kobject directory.  If we specify a name, a subdirectory will be
+ * created for the attributes with the directory being the name of the
+ * attribute group.
+ */
+static struct attribute_group modem_img_attr_group = {
+         .attrs = modem_img_attrs,
+};
+static struct kobject *modem_img_check_kobj;
+int ksysfs_modem_img_check_init(void)
+{
+        int retval;
+        /*
+         * Create a simple kobject with the name of "kobject_example",
+         * located under /sys/kernel/
+         *
+         * As this is a simple directory, no uevent will be sent to
+         * userspace.  That is why this function should not be used for
+         * any type of dynamic kobjects, where the name and number are
+         * not known ahead of time.
+         */
+        modem_img_check_kobj = kobject_create_and_add("modem_img_check", kernel_kobj);
+        if (!modem_img_check_kobj)
+                return -ENOMEM;
+        /* Create the files associated with this kobject */
+        retval = sysfs_create_group(modem_img_check_kobj, &modem_img_attr_group);
+        if (retval)
+                kobject_put(modem_img_check_kobj);
+        return retval;
+}
+void ksysfs_modem_img_check_exit(void)
+{
+        kobject_put(modem_img_check_kobj);
+}
+// end of FR 997536 modem check flag kobj
+
 /**
  * pil_do_ramdump() - Ramdump an image
  * @desc: descriptor from pil_desc_init()
@@ -597,8 +655,15 @@ static int pil_load_seg(struct pil_desc *desc, struct pil_seg *seg)
 
 	if (desc->ops->verify_blob) {
 		ret = desc->ops->verify_blob(desc, seg->paddr, seg->sz);
-		if (ret)
+		if (ret) {
 			pil_err(desc, "Blob%u failed verification\n", num);
+// add for modem check error flag, native will check it and show picture, FR 997536
+			if(! strcmp(desc->name, "modem"))
+				modem_img_check = 1;
+		}
+		if(! strcmp(desc->name, "modem"))
+			modem_img_check = 0;
+// end of FR 997536 modem check flag
 	}
 
 	return ret;
@@ -909,7 +974,9 @@ static int __init msm_pil_init(void)
 	struct device_node *np;
 	struct resource res;
 	int i;
-
+// add for modem check kobj init, FR 997536
+	ksysfs_modem_img_check_init();
+// end of FR 997536 kobj init
 	np = of_find_compatible_node(NULL, NULL, "qcom,msm-imem-pil");
 	if (!np) {
 		pr_warn("pil: failed to find qcom,msm-imem-pil node\n");
@@ -934,6 +1001,9 @@ device_initcall(msm_pil_init);
 
 static void __exit msm_pil_exit(void)
 {
+// add for modem check kobj exit, FR 997536
+	ksysfs_modem_img_check_exit();
+// end of FR 997536 kobj exit
 	unregister_pm_notifier(&pil_pm_notifier);
 	if (pil_info_base)
 		iounmap(pil_info_base);

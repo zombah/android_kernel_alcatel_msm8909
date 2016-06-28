@@ -18,6 +18,20 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <soc/qcom/memory_dump.h>
+
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watch dog ramdump PR-802266
+#ifdef CONFIG_TCT_WATCHDOG_CTX_PRINT
+#include <linux/pstore_ram.h>
+#include <linux/kallsyms.h>
+#include <linux/dma-mapping.h>
+#include <soc/qcom/socinfo.h>
+#include <linux/proc_fs.h>
+#include <linux/fs.h>
+#endif
+//end add by jch for watch dog ramdump PR-802266
+#endif
+
 #include <soc/qcom/scm.h>
 
 #define MSM_DUMP_TABLE_VERSION		MSM_DUMP_MAKE_VERSION(2, 0)
@@ -36,6 +50,321 @@ struct msm_memory_dump {
 };
 
 static struct msm_memory_dump memdump;
+
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watch dog ramdump PR-802266  
+#ifdef CONFIG_TCT_WATCHDOG_CTX_PRINT
+#define TZBSP_DUMP_CTX_MAGIC		0x42445953
+#define TZBSP_DUMP_CTX_VERSION		0x11//0x3
+#define MAX_CPU_CTX_PAGE_SIZE		1024
+struct cpu32_ctxt_regs_type
+{
+    uint64_t u1;
+    uint64_t u2;
+    uint64_t r0;
+    uint64_t r1;
+    uint64_t r2;
+    uint64_t r3;
+    uint64_t r4;
+    uint64_t r5;
+    uint64_t r6;
+    uint64_t r7;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13_usr;
+    uint64_t r14_usr;
+    uint64_t r13_hyp;
+    uint64_t r14_irq;
+    uint64_t r13_irq;
+    uint64_t r14_svc;
+    uint64_t r13_svc;
+    uint64_t r14_abt;
+    uint64_t r13_abt;
+    uint64_t r14_und;
+    uint64_t r13_und;
+    uint64_t r8_fiq;
+    uint64_t r9_fiq;
+    uint64_t r10_fiq;
+    uint64_t r11_fiq;
+    uint64_t r12_fiq;
+    uint64_t r13_fiq;
+    uint64_t r14_fiq;
+    uint64_t pc;
+    uint64_t cpsr;
+    uint64_t r13_mon;
+    uint64_t r14_mon;
+    uint64_t r14_hyp;
+    uint64_t _reserved;
+    uint64_t __reserved1;
+    uint64_t __reserved2;
+    uint64_t __reserved3;
+    uint64_t __reserved4;
+};
+
+struct cpu32_secure_ctxt_regs_type
+{
+    uint64_t r0;
+    uint64_t r1;
+    uint64_t r2;
+    uint64_t r3;
+    uint64_t r4;
+    uint64_t r5;
+    uint64_t r6;
+    uint64_t r7;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13_usr;
+    uint64_t r14_usr;
+    uint64_t r13_hyp;
+    uint64_t r14_irq;
+    uint64_t r13_irq;
+    uint64_t r14_svc;
+    uint64_t r13_svc;
+    uint64_t r14_abt;
+    uint64_t r13_abt;
+    uint64_t r14_und;
+    uint64_t r13_und;
+    uint64_t r8_fiq;
+    uint64_t r9_fiq;
+    uint64_t r10_fiq;
+    uint64_t r11_fiq;
+    uint64_t r12_fiq;
+    uint64_t r13_fiq;
+    uint64_t r14_fiq;
+    uint64_t pc;
+    uint64_t cpsr;
+    uint64_t r13_mon;
+    uint64_t r14_mon;
+    uint64_t r14_hyp;
+    uint64_t _reserved;
+    uint64_t __reserved1;
+    uint64_t __reserved2;
+    uint64_t __reserved3;
+    uint64_t __reserved4;
+};
+
+struct cpu_ctxt_regs
+{
+     struct cpu32_ctxt_regs_type cpu32_regs;
+     struct cpu32_secure_ctxt_regs_type secure_contex;
+};
+
+struct wdt_ctx_info
+{
+      char *buf;
+      unsigned long bufsize;
+      unsigned long charend;
+     // spinlock_t  buf_lock;
+};
+struct wdt_ctx_info wdt_ctx_s;
+
+//modify by jch for update watch dog ramdump PR-802266
+/*
+int wdt_save_info(unsigned long cpu_data_addr){
+
+	return  pstore_save_wdt_info(cpu_data_addr);
+}
+EXPORT_SYMBOL(wdt_save_info);
+*/
+//end modify by jch for update watch dog ramdump PR-802266
+
+void pstore_wdt_init(void)
+{
+    wdt_ctx_s.bufsize = 16*1024UL;
+	wdt_ctx_s.charend = 0;
+    wdt_ctx_s.buf = kzalloc(wdt_ctx_s.bufsize, GFP_KERNEL);
+ if (!wdt_ctx_s.buf ) {
+		printk("WDT ctx dump buf allocation failed\n");
+		goto out;
+	 }
+	 return;
+out:
+	kfree(wdt_ctx_s.buf);
+	return;
+}
+
+
+int pstore_wdt_print(const char *fmt, ...)
+{
+	va_list args;
+	int len = 0;
+	char buf_line[256];
+	//unsigned long flags;
+
+	va_start(args, fmt);
+	len = vsnprintf(buf_line, sizeof(buf_line) , fmt, args);
+	va_end(args);
+
+	if (!wdt_ctx_s.buf ) {
+		printk("WDT ctx print buf is null!\n");
+		return 0;
+	}
+
+	if(wdt_ctx_s.charend >= wdt_ctx_s.bufsize){
+		printk("WDT:buf size is not enough!");
+		return 0;
+	}
+
+	if (len > (wdt_ctx_s.bufsize -wdt_ctx_s.charend))
+		len = wdt_ctx_s.bufsize -wdt_ctx_s.charend;
+
+	//spin_lock_irqsave(&wdt_ctx_s.buf_lock, flags);	
+	memcpy(wdt_ctx_s.buf + wdt_ctx_s.charend, buf_line, len);
+	wdt_ctx_s.charend += len;
+	//spin_unlock_irqrestore(&wdt_ctx_s.buf_lock, flags);		
+
+	return len;
+}
+
+#define TCTWDT(fmt, args...) do {			\
+	pstore_wdt_print(fmt, ##args);	\
+} while (0)
+
+void wdt_print_symbol(const char *fmt, uint64_t address)
+{       
+	char buffer[256];
+	sprint_symbol(buffer,(unsigned long)address);
+	TCTWDT(fmt, buffer);
+}
+
+static void wdt_show_regs(struct cpu_ctxt_regs *cpu_ctxt,
+			const char *label)
+{        
+	TCTWDT("\n%s:\n", label);
+	wdt_print_symbol("PC is at: %s ",cpu_ctxt->cpu32_regs.pc);
+	TCTWDT("<0x%08llx>\n", cpu_ctxt->cpu32_regs.pc);
+	wdt_print_symbol("LR is at: %s ",cpu_ctxt->cpu32_regs.r14_svc);
+	TCTWDT("<0x%08llx>\n", cpu_ctxt->cpu32_regs.r14_svc);
+    TCTWDT("\n%s regs:\n", label);
+	TCTWDT("\t       r0 : 0x%08llx          r1 : 0x%08llx         r2 : 0x%08llx         r3 : 0x%08llx         r4 : 0x%08llx         r5 : 0x%08llx         r6 : 0x%08llx\n",
+		cpu_ctxt->cpu32_regs.r0, cpu_ctxt->cpu32_regs.r1, cpu_ctxt->cpu32_regs.r2,cpu_ctxt->cpu32_regs.r3, cpu_ctxt->cpu32_regs.r4, cpu_ctxt->cpu32_regs.r5, cpu_ctxt->cpu32_regs.r6);
+	TCTWDT("\t       r7 : 0x%08llx          r8 : 0x%08llx         r9 : 0x%08llx        r10 : 0x%08llx        r11 : 0x%08llx \n",
+		cpu_ctxt->cpu32_regs.r7, cpu_ctxt->cpu32_regs.r8, cpu_ctxt->cpu32_regs.r9,	cpu_ctxt->cpu32_regs.r10,cpu_ctxt->cpu32_regs.r11);
+	TCTWDT("\t      r12 : 0x%08llx     r13_usr : 0x%08llx    r14_usr : 0x%08llx    r13_hyp : 0x%08llx    r14_irq : 0x%08llx \n",
+		cpu_ctxt->cpu32_regs.r12, cpu_ctxt->cpu32_regs.r13_usr,cpu_ctxt->cpu32_regs.r14_usr,cpu_ctxt->cpu32_regs.r13_hyp, cpu_ctxt->cpu32_regs.r14_irq);
+	TCTWDT("\t  r13_irq : 0x%08llx     r14_svc : 0x%08llx    r13_svc : 0x%08llx    r14_abt : 0x%08llx    r13_abt : 0x%08llx\n",
+		cpu_ctxt->cpu32_regs.r13_irq,cpu_ctxt->cpu32_regs.r14_svc,cpu_ctxt->cpu32_regs.r13_svc, cpu_ctxt->cpu32_regs.r14_abt, cpu_ctxt->cpu32_regs.r13_abt);
+	TCTWDT("\t  r14_und : 0x%08llx     r13_und : 0x%08llx     r8_fiq : 0x%08llx     r9_fiq : 0x%08llx    r10_fiq : 0x%08llx\n",
+		cpu_ctxt->cpu32_regs.r14_und,cpu_ctxt->cpu32_regs.r13_und, cpu_ctxt->cpu32_regs.r8_fiq, cpu_ctxt->cpu32_regs.r9_fiq,cpu_ctxt->cpu32_regs.r10_fiq);	
+	TCTWDT("\t  r11_fiq : 0x%08llx     r12_fiq : 0x%08llx    r13_fiq : 0x%08llx    r14_fiq : 0x%08llx         pc : 0x%08llx\n",
+		cpu_ctxt->cpu32_regs.r11_fiq, cpu_ctxt->cpu32_regs.r12_fiq, cpu_ctxt->cpu32_regs.r13_fiq,cpu_ctxt->cpu32_regs.r14_fiq,cpu_ctxt->cpu32_regs.pc);
+	TCTWDT("\t     cpsr : 0x%08llx     r13_mon : 0x%08llx    r14_mon : 0x%08llx   reserved : 0x%08llx  reserved1 : 0x%08llx\n",
+		cpu_ctxt->cpu32_regs.cpsr, cpu_ctxt->cpu32_regs.r13_mon,cpu_ctxt->cpu32_regs.r14_mon,cpu_ctxt->cpu32_regs._reserved, cpu_ctxt->cpu32_regs.__reserved1);		
+	TCTWDT("\treserved2 : 0x%08llx   reserved3 : 0x%08llx  reserved4 : 0x%08llx\n",
+		cpu_ctxt->cpu32_regs.__reserved2,cpu_ctxt->cpu32_regs.__reserved3, cpu_ctxt->cpu32_regs.__reserved4);
+	TCTWDT("\n%s secure contex:\n", label);
+	TCTWDT("\t       r0 : 0x%08llx          r1 : 0x%08llx         r2 : 0x%08llx         r3 : 0x%08llx         r4 : 0x%08llx         r5 : 0x%08llx         r6 : 0x%08llx\n",
+		cpu_ctxt->secure_contex.r0, cpu_ctxt->secure_contex.r1, cpu_ctxt->secure_contex.r2,cpu_ctxt->secure_contex.r3, cpu_ctxt->secure_contex.r4, cpu_ctxt->secure_contex.r5, cpu_ctxt->secure_contex.r6);
+	TCTWDT("\t       r7 : 0x%08llx          r8 : 0x%08llx         r9 : 0x%08llx        r10 : 0x%08llx        r11 : 0x%08llx \n",
+		cpu_ctxt->secure_contex.r7, cpu_ctxt->secure_contex.r8, cpu_ctxt->secure_contex.r9,	cpu_ctxt->secure_contex.r10,cpu_ctxt->secure_contex.r11);
+	TCTWDT("\t      r12 : 0x%08llx     r13_usr : 0x%08llx    r14_usr : 0x%08llx    r13_hyp : 0x%08llx    r14_irq : 0x%08llx \n",
+		cpu_ctxt->secure_contex.r12, cpu_ctxt->secure_contex.r13_usr,cpu_ctxt->secure_contex.r14_usr,cpu_ctxt->secure_contex.r13_hyp, cpu_ctxt->secure_contex.r14_irq);
+	TCTWDT("\t  r13_irq : 0x%08llx     r14_svc : 0x%08llx    r13_svc : 0x%08llx    r14_abt : 0x%08llx    r13_abt : 0x%08llx\n",
+		cpu_ctxt->secure_contex.r13_irq,cpu_ctxt->secure_contex.r14_svc,cpu_ctxt->secure_contex.r13_svc, cpu_ctxt->secure_contex.r14_abt, cpu_ctxt->secure_contex.r13_abt);
+	TCTWDT("\t  r14_und : 0x%08llx     r13_und : 0x%08llx     r8_fiq : 0x%08llx     r9_fiq : 0x%08llx    r10_fiq : 0x%08llx\n",
+		cpu_ctxt->secure_contex.r14_und,cpu_ctxt->secure_contex.r13_und, cpu_ctxt->secure_contex.r8_fiq, cpu_ctxt->secure_contex.r9_fiq,cpu_ctxt->secure_contex.r10_fiq);	
+	TCTWDT("\t  r11_fiq : 0x%08llx     r12_fiq : 0x%08llx    r13_fiq : 0x%08llx    r14_fiq : 0x%08llx         pc : 0x%08llx\n",
+		cpu_ctxt->secure_contex.r11_fiq, cpu_ctxt->secure_contex.r12_fiq, cpu_ctxt->secure_contex.r13_fiq,cpu_ctxt->secure_contex.r14_fiq,cpu_ctxt->secure_contex.pc);
+	TCTWDT("\t     cpsr : 0x%08llx     r13_mon : 0x%08llx    r14_mon : 0x%08llx   reserved : 0x%08llx  reserved1 : 0x%08llx\n",
+		cpu_ctxt->secure_contex.cpsr, cpu_ctxt->secure_contex.r13_mon,cpu_ctxt->secure_contex.r14_mon,cpu_ctxt->secure_contex._reserved, cpu_ctxt->secure_contex.__reserved1);		
+	TCTWDT("\treserved2 : 0x%08llx   reserved3 : 0x%08llx  reserved4 : 0x%08llx\n",
+		cpu_ctxt->secure_contex.__reserved2,cpu_ctxt->secure_contex.__reserved3, cpu_ctxt->secure_contex.__reserved4);
+}
+
+static ssize_t last_cpu_knob_read(struct file *f, char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	return simple_read_from_buffer(buf, count, ppos, wdt_ctx_s.buf, wdt_ctx_s.charend);
+}
+
+static const struct file_operations last_cpu_fops = {
+	.open	= simple_open,
+	.read	= last_cpu_knob_read,	
+};
+
+void mk_last_cpu(void)
+{      
+	if (!wdt_ctx_s.buf )
+		return;
+	if (!proc_create("last_cpu", S_IRUSR, NULL,&last_cpu_fops)){
+		printk("WDT: creat last_cpu  fail!\n");
+		return;
+	}
+ 
+	return;
+}
+
+//modify by jch for update watch dog ramdump PR-802266
+//void wdt_ctx_print( void )
+void wdt_ctx_print(  unsigned long cpudata_addr )
+//end modify by jch for update watch dog ramdump PR-802266
+{	
+
+    struct msm_dump_data *cpu_data;
+	unsigned long addr;
+	char label[64];	
+	struct cpu_ctxt_regs *ctxt_regs;	
+	const int cpu_count = get_core_count();
+	int i;
+	
+    pstore_wdt_init();
+      
+	TCTWDT("************ WDT CPU Status Dump By TZ Start ************\n\n");
+
+//modify by jch for update watch dog ramdump PR-802266
+    //cpu_data = (struct msm_dump_data *)pstore_get_wdt_info();
+    cpu_data = (struct msm_dump_data *)phys_to_virt(cpudata_addr);
+//end modify by jch for update watch dog ramdump PR-802266
+	if(!cpu_data){
+		printk("WDT:TZ BSP dump cpu data might be not found!\n"); 
+		TCTWDT("TZ BSP dump cpu data might be not founed!\n"); 
+              goto out;
+	}
+
+	if(cpu_data->magic != TZBSP_DUMP_CTX_MAGIC || cpu_data->version!=TZBSP_DUMP_CTX_VERSION ){
+		TCTWDT("Magic 0x%x version 0x%x doesn't match! No context will be parsed.\n",cpu_data->magic,cpu_data->version);
+		printk("WDT:Magic 0x%x version 0x%x doesn't match! No context will be parsed.\n",cpu_data->magic,cpu_data->version);
+              goto out;		
+	}  
+	printk("WDT:Parsing debug information Version: %d, Magic: 0x%x,reserved: 0x%x.\n",cpu_data->version,cpu_data->magic,cpu_data->reserved);
+	if(!cpu_data->addr){
+		printk("WDT:TZ BSP dump buffer might be not found!\n"); 
+	       TCTWDT("TZ BSP dump buffer might be not found!\n"); 
+              goto out;	
+	} 
+   	printk("WDT:cpu_data:Parsing debug information: 0x%08llx\n",cpu_data->addr);
+	addr = (unsigned long)cpu_data->addr;
+		ctxt_regs = (struct cpu_ctxt_regs *)phys_to_virt(addr);
+   	if (!ctxt_regs) {
+		 TCTWDT(" TZ BSP dump buffer might be mismatch. \n");	
+		 goto out;
+	}
+	TCTWDT("Start to dump panic info:\n");
+
+	//tct_smem_reason = 2; //add by shenghua.gong@tcl.com PR[825698]
+	
+	for (i = 0; i < cpu_count; i++) {
+		snprintf(label, sizeof(label) - 1, "CPU%d", i);
+		addr +=  i*MAX_CPU_CTX_PAGE_SIZE;
+		ctxt_regs = (struct cpu_ctxt_regs *)phys_to_virt(addr);		
+		wdt_show_regs(ctxt_regs, label);		
+	}
+
+out:
+	TCTWDT("\n************ WDT CPU Status Dump By TZ End ************\n");
+	mk_last_cpu();
+	return;	
+}
+EXPORT_SYMBOL(wdt_ctx_print);
+#endif //CONFIG_TCT_WATCHDOG_CTX_PRINT
+//end add by jch for watch dog ramdump PR-802266
+#endif
 
 uint32_t msm_dump_table_version(void)
 {

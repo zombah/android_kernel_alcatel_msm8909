@@ -28,8 +28,21 @@
 #include "board-dt.h"
 #include "platsmp.h"
 
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+#include <linux/pstore_ram.h>//add by jch for ramconsole PR-802169
+#endif
 static void __init msm8909_dt_reserve(void)
 {
+	#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+	//add by jch for watch dog ramdump PR-802266  
+	#ifdef CONFIG_TCT_WATCHDOG_CTX_PRINT
+	       wdt_contig_reserve_area();
+	#endif
+	//end add by jch for watch dog ramdump PR-802266
+	#endif  
+	#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+		ramoops_contig_reserve_area();//add by jch for ramconsole PR-802169
+	#endif
 	of_scan_flat_dt(dt_scan_for_memory_reserve, NULL);
 }
 

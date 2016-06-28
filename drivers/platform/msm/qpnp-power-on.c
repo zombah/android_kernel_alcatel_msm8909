@@ -1201,6 +1201,9 @@ static int qpnp_pon_config_init(struct qpnp_pon *pon)
 								cfg->pon_type);
 			return -EINVAL;
 		}
+#ifdef FEATURE_TCTSH_FAKE_BATTERY_SUPPORT/*#[BUGFIX]-ADD by TCTSH.shine,04/27/2015,PR-987564.for disable hard reset ,hardware test*/
+                cfg->support_reset=0;
+#endif
 
 		if (cfg->support_reset) {
 			/*
@@ -1636,6 +1639,9 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 		s3_src_reg = QPNP_PON_S3_SRC_KPDPWR_OR_RESIN;
 	else /* default combination */
 		s3_src_reg = QPNP_PON_S3_SRC_KPDPWR_AND_RESIN;
+#ifdef  FEATURE_TCTSH_FAKE_BATTERY_SUPPORT   /*#[BUGFIX]-ADD by TCTSH.SHINE,04/27/2015,PR-987564.for disable hard reset ,hardware test*/
+          s3_src_reg=QPNP_PON_S3_SRC_RESIN;
+#endif
 
 	/* S3 source is a write once register. If the register has
 	 * been configured by bootloader then this operation will
@@ -1678,6 +1684,9 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 		dev_err(&spmi->dev, "sys file creation failed\n");
 		return rc;
 	}
+#ifdef  FEATURE_TCTSH_FAKE_BATTERY_SUPPORT  /*#[BUGFIX]-ADD by TCTSH.shine,04/27/2015,PR-987564.for disable hard reset ,hardware test*/
+      qpnp_pon_wd_config(0);
+#endif
 
 	/* config whether store the hard reset reason */
 	pon->store_hard_reset_reason = of_property_read_bool(

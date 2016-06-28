@@ -284,6 +284,52 @@ static void pet_watchdog(struct msm_watchdog_data *wdog_dd)
 	wdog_dd->last_pet = time_ns;
 }
 
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watchdog reset test PR-802266
+void g_pet_watchdog(void)
+{
+	pet_watchdog(wdog_data);
+}
+
+void msm_watchdog_reset(unsigned int timeout)
+{
+	unsigned long flags;
+	void __iomem *msm_wdt_base;
+
+	local_irq_save(flags);
+
+	if (timeout > 60)
+		timeout = 60;
+
+	msm_wdt_base = wdog_data->base;
+	__raw_writel(WDT_HZ * timeout, msm_wdt_base + WDT0_BARK_TIME);
+	__raw_writel(WDT_HZ * (timeout + 2), msm_wdt_base + WDT0_BITE_TIME);
+	__raw_writel(1, msm_wdt_base + WDT0_EN);
+	__raw_writel(1, msm_wdt_base + WDT0_RST);
+
+	for (timeout += 2; timeout > 0; timeout--)
+		mdelay(1000);
+
+	for (timeout = 2; timeout > 0; timeout--) {
+		__raw_writel(0, msm_wdt_base + WDT0_BARK_TIME);
+		__raw_writel(WDT_HZ, msm_wdt_base + WDT0_BITE_TIME);
+		__raw_writel(1, msm_wdt_base + WDT0_RST);
+		mdelay(1000);
+	}
+
+   	for (timeout = 2; timeout > 0; timeout--) {
+		__raw_writel(WDT_HZ, msm_wdt_base + WDT0_BARK_TIME);
+		__raw_writel(0, msm_wdt_base + WDT0_BITE_TIME);
+		__raw_writel(1, msm_wdt_base + WDT0_RST);
+		mdelay(1000);
+	}
+	pr_err("Watchdog reset has failed\n");
+
+   	local_irq_restore(flags);
+}
+//end add by jch for watchdog reset test PR-802266
+#endif
+
 static void keep_alive_response(void *info)
 {
 	int cpu = smp_processor_id();
@@ -424,6 +470,59 @@ static irqreturn_t wdog_ppi_bark(int irq, void *dev_id)
 	return wdog_bark_handler(irq, wdog_dd);
 }
 
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watch dog ramdump PR-802266  
+#ifdef CONFIG_TCT_WATCHDOG_CTX_PRINT
+#include <linux/dma-mapping.h>
+#include <linux/memblock.h>
+#include <linux/pstore_ram.h>
+
+static ulong wdt_buf_address = 0x9fa80000;
+module_param(wdt_buf_address, ulong, 0400);
+MODULE_PARM_DESC(wdt_buf_address,"start of reserved RAM used to store wdt cpu data and cpu buf");
+
+static ulong wdt_buf_size = 16*1024UL;
+module_param(wdt_buf_size, ulong, 0400);
+MODULE_PARM_DESC(wdt_buf_size,	"size of reserved RAM used to store wdt cpu data and cpu buf");
+
+
+//modify by jch for update watch dog ramdump PR-802266
+//extern void wdt_ctx_print( void );
+extern void wdt_ctx_print(  unsigned long cpudata_addr );
+//extern int wdt_save_info(unsigned long cpu_data_addr);
+//end modify by jch for update watch dog ramdump PR-802266
+
+void __init  wdt_contig_reserve_area(void)
+{
+	if (memblock_is_region_reserved(wdt_buf_address, wdt_buf_size)) {
+		printk("WDT: memblock reserved will be fail!\n");
+		wdt_buf_address = memblock_alloc(wdt_buf_size, PAGE_SIZE);
+		if (!wdt_buf_address) 
+			printk("WDT:memblock reserved alloc error!\n");
+		if (memblock_is_region_reserved(wdt_buf_address, wdt_buf_size)) 
+   		    printk("WDT:memblock region reserved error!\n");
+	}
+	else{
+		if ( memblock_reserve(wdt_buf_address, wdt_buf_size) < 0) {
+			printk("WDT:memblock reserved error!\n");
+        }
+   	}
+   
+}
+void   wdt_reserve_area_init(void)
+{
+    if (!wdt_buf_address) {
+		    printk("WDT:init reserved error!\n");
+            return;
+	   }
+	memset((unsigned char *)phys_to_virt(wdt_buf_address),0,wdt_buf_size);
+  
+}
+
+#endif
+//end add by jch for watch dog ramdump PR-802266
+#endif
+
 static void configure_bark_dump(struct msm_watchdog_data *wdog_dd)
 {
 	int ret;
@@ -436,6 +535,23 @@ static void configure_bark_dump(struct msm_watchdog_data *wdog_dd)
 		unsigned addr;
 		int len;
 	} cmd_buf;
+
+	#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+	//add by jch for watch dog ramdump PR-802266  
+	#ifdef CONFIG_TCT_WATCHDOG_CTX_PRINT
+	    wdt_ctx_print(wdt_buf_address);//modify by jch for update watch dog ramdump PR-802266
+	#endif
+	//end add by jch for watch dog ramdump PR-802266 
+	if (MSM_DUMP_MAJOR(msm_dump_table_version()) == 1) {
+		wdog_dd->scm_regsave = (void *)__get_free_page(GFP_KERNEL);
+		if (wdog_dd->scm_regsave) {
+			cmd_buf.addr = virt_to_phys(wdog_dd->scm_regsave);
+			cmd_buf.len  = PAGE_SIZE;
+			ret = scm_call(SCM_SVC_UTIL, SCM_SET_REGSAVE_CMD,
+   			&cmd_buf, sizeof(cmd_buf), NULL, 0);
+
+	#else
+	
 	struct scm_desc desc = {0};
 
 	if (MSM_DUMP_MAJOR(msm_dump_table_version()) == 1) {
@@ -453,6 +569,7 @@ static void configure_bark_dump(struct msm_watchdog_data *wdog_dd)
 			else
 				ret = scm_call2(SCM_SIP_FNID(SCM_SVC_UTIL,
 						SCM_SET_REGSAVE_CMD), &desc);
+	#endif
 			if (ret)
 				pr_err("Setting register save address failed.\n"
 				       "Registers won't be dumped on a dog "
@@ -476,6 +593,28 @@ static void configure_bark_dump(struct msm_watchdog_data *wdog_dd)
 			 */
 		}
 	} else {
+
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watch dog ramdump PR-802266  
+#ifdef CONFIG_TCT_WATCHDOG_CTX_PRINT
+			wdt_reserve_area_init();
+			cpu_data = (struct msm_dump_data *)phys_to_virt(wdt_buf_address);
+		if (!cpu_data) {
+			pr_err("WDT:cpu dump data structure allocation failed\n");
+			goto out0;
+		}		
+
+		cpu_buf = (void *)phys_to_virt(wdt_buf_address + sizeof(struct msm_dump_data) *
+   					   num_present_cpus() + 32);
+		if (!cpu_buf) {
+			pr_err("cpu reg context space allocation failed\n");
+			goto out1;
+		}
+   
+//end add by jch for watch dog ramdump PR-802266
+#endif 
+#else
+
 		cpu_data = kzalloc(sizeof(struct msm_dump_data) *
 				   num_present_cpus(), GFP_KERNEL);
 		if (!cpu_data) {
@@ -488,7 +627,7 @@ static void configure_bark_dump(struct msm_watchdog_data *wdog_dd)
 			pr_err("cpu reg context space allocation failed\n");
 			goto out1;
 		}
-
+#endif
 		for_each_cpu(cpu, cpu_present_mask) {
 			cpu_data[cpu].addr = virt_to_phys(cpu_buf +
 							cpu * MAX_CPU_CTX_SIZE);

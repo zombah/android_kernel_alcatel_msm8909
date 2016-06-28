@@ -1832,3 +1832,18 @@ config ASN1
 	  functions to call on what tags.
 
 source "kernel/Kconfig.locks"
+
+#add by jch for watch dog ramdump PR-802266
+config TCT_WATCHDOG_CTX_PRINT
+	bool
+	default y
+	depends on (MSM_WATCHDOG_V2 && PSTORE)
+	help
+	  watchdog time out dump by tz to ramoops.
+#end add by jch for watch dog ramdump PR-802266
+
+#Add TCT debug files for PR 937829 by wenzhao.guo 20150401 begin
+config TCT_DEBUG
+    bool "TCT_DEBUG"
+	default y
+#Add TCT debug files for PR 937829 by wenzhao.guo 20150401 end

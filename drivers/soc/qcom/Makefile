@@ -40,6 +40,7 @@ obj-$(CONFIG_MSM_COMMON_LOG) += common_log.o
 obj-$(CONFIG_MSM_SMP2P) += smp2p.o smp2p_debug.o
 obj-$(CONFIG_MSM_SMP2P_TEST) += smp2p_loopback.o smp2p_test.o smp2p_spinlock_test.o
 obj-$(CONFIG_MSM_WATCHDOG_V2) += watchdog_v2.o
+obj-$(CONFIG_TCT_WATCHDOG_TEST) += watchdogtest.o#add by jch for watchdog reset test PR-802266
 obj-$(CONFIG_MEM_SHARE_QMI_SERVICE)		+= memshare/
 obj-$(CONFIG_MSM_SPM) += spm.o spm_devices.o
 obj-y		+= socinfo.o
@@ -72,6 +73,10 @@ obj-$(CONFIG_MSM_XPU_ERR_FATAL) += scm-xpu.o
 ifdef CONFIG_MSM_RTB
 	obj-y += msm_rtb-hotplug.o
 endif
+
+#added begin by stephen.wu for subsys reason record
+obj-$(CONFIG_JRD_SSR_RECORD) += ssr_record.o
+#add end by stephen.wu
 
 obj-$(CONFIG_MSM_SHARED_HEAP_ACCESS) += shared_memory.o
 obj-$(CONFIG_MSM_SYSTEM_HEALTH_MONITOR) += system_health_monitor_v01.o

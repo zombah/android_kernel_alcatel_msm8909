@@ -46,8 +46,18 @@
 static uint disable_restart_work;
 module_param(disable_restart_work, uint, S_IRUGO | S_IWUSR);
 
+//begin added by stephen.wu for subsys reason record
+#ifdef CONFIG_JRD_SSR_RECORD
+#include <linux/rtc.h>
+#endif
+//end added by stephen.wu
+
 static int enable_debug;
 module_param(enable_debug, int, S_IRUGO | S_IWUSR);
+
+#ifdef CONFIG_MSM_DLOAD_MODE
+char panic_subsystem[16];
+#endif /* CONFIG_MSM_DLOAD_MODE */
 
 /**
  * enum p_subsys_state - state of a subsystem (private)
@@ -538,6 +548,12 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 	dev->crash_count++;
 	subsys_set_state(dev, SUBSYS_OFFLINE);
 	disable_all_irqs(dev);
+	//begin added by stephen.wu for subsys reason record
+	#ifdef CONFIG_JRD_SSR_RECORD
+    printk("===================start record!!!!!\n");
+    subsystem_restart_record(ssr_buf);
+	#endif
+	//end added by stephen.wu
 }
 
 static void subsystem_ramdump(struct subsys_device *dev, void *data)
@@ -865,6 +881,64 @@ static void device_restart_work_hdlr(struct work_struct *work)
 							dev->desc->name);
 }
 
+//begin added by stephen.wu for subsys reason record
+#ifdef CONFIG_JRD_SSR_RECORD
+void subsystem_restart_record(const char* reason)
+{
+	static int ssr_flag = 0;
+
+	if(ssr_flag == 0) {
+        struct file *ssr_file;
+        mm_segment_t ssr_old_fs;
+
+        ssr_file = filp_open(SSR_RECORD_FILE, O_WRONLY | O_CREAT | O_APPEND, 0644);
+            if (IS_ERR(ssr_file)) {
+                printk("=================open ssr file %s failed.\n", SSR_RECORD_FILE);
+                } else {
+                       printk("=================open ssr file %s successed.\n", SSR_RECORD_FILE);
+
+                       if(ssr_file->f_inode->i_size > 5 * 1024) {
+                               ssr_flag = 1;
+                               printk("=================ssr_record_file_size:%lld\n", ssr_file->f_inode->i_size);
+                       } else {
+                               printk("=================ssr_record_file_size:%lld\n", ssr_file->f_inode->i_size);
+
+                               ssr_old_fs = get_fs();
+                       set_fs(get_ds());
+					   printk("=================start write!!!!!\n");
+                       if(vfs_write(ssr_file, reason, strlen(reason), &ssr_file->f_pos) >= 0) {
+                             printk("=================end write!!!!!\n");
+                       } else {
+							 printk("=================write %s failed!\n", SSR_RECORD_FILE);
+						}
+						    set_fs(ssr_old_fs);
+						}
+					   filp_close(ssr_file, NULL);
+                       printk("=================close ssr file %s successed.\n", SSR_RECORD_FILE);
+			    }
+       } else {
+			printk("===================stop record!!!!!\n");
+		}
+}
+
+EXPORT_SYMBOL(subsystem_restart_record);
+
+void subsystem_record_add_time(char* buf)
+{
+    struct timespec ts;
+    struct rtc_time tm;
+
+    getnstimeofday(&ts);
+    rtc_time_to_tm(ts.tv_sec, &tm);
+
+    sprintf(buf, "%s[%d-%02d-%02d %02d:%02d:%02d UTC]\n", buf,
+		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
+
+EXPORT_SYMBOL(subsystem_record_add_time);
+#endif
+//end added by stephen.wu
+
 int subsystem_restart_dev(struct subsys_device *dev)
 {
 	const char *name;
@@ -892,6 +966,21 @@ int subsystem_restart_dev(struct subsys_device *dev)
 
 	pr_info("Restart sequence requested for %s, restart_level = %s.\n",
 		name, restart_levels[dev->restart_level]);
+
+	//begin added by stephen.wu for subsys reason record
+	#ifdef CONFIG_JRD_SSR_RECORD
+	sprintf(ssr_buf, "%sRestart sequence requested for %s, restart_level = %s.",
+               ssr_buf, name, restart_levels[dev->restart_level]);
+       subsystem_record_add_time(ssr_buf);
+       sprintf(ssr_buf, "%s\n\n", ssr_buf);
+	#endif
+	//end added by stephen.wu
+
+	/* FR-878465, save subsystem name */
+#ifdef CONFIG_MSM_DLOAD_MODE
+	memset(panic_subsystem, 0, sizeof(panic_subsystem));
+	memcpy(panic_subsystem, name, strlen(name));
+#endif /* CONFIG_MSM_DLOAD_MODE */
 
 	if (WARN(disable_restart_work == DISABLE_SSR,
 		"subsys-restart: Ignoring restart request for %s.\n", name)) {
@@ -1626,6 +1715,10 @@ static int __init subsys_restart_init(void)
 			&panic_nb);
 	if (ret)
 		goto err_soc;
+
+#ifdef CONFIG_MSM_DLOAD_MODE
+	sprintf(panic_subsystem, "%s", "unknown");
+#endif /* CONFIG_MSM_DLOAD_MODE */
 
 	return 0;
 

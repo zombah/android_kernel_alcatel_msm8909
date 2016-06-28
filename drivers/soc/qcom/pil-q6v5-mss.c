@@ -43,6 +43,12 @@
 
 #define subsys_to_drv(d) container_of(d, struct modem_data, subsys_desc)
 
+//begin added by stephen.wu for subsys reason record
+#ifdef CONFIG_JRD_SSR_RECORD
+extern void subsystem_record_add_time(char*);
+#endif
+//endd added by stephen.wu
+
 static void log_modem_sfr(void)
 {
 	u32 size;
@@ -52,16 +58,37 @@ static void log_modem_sfr(void)
 							SMEM_ANY_HOST_FLAG);
 	if (!smem_reason || !size) {
 		pr_err("modem subsystem failure reason: (unknown, smem_get_entry_no_rlock failed).\n");
+
+		//begin added by stephen.wu for subsys reason record
+		#ifdef CONFIG_JRD_SSR_RECORD
+			sprintf(ssr_buf, "modem subsystem failure reason: (unknown, smem_get_entry_no_rlock failed).");
+			subsystem_record_add_time(ssr_buf);
+		#endif
+		//end added by stephen.wu
+
 		return;
 	}
 	if (!smem_reason[0]) {
 		pr_err("modem subsystem failure reason: (unknown, empty string found).\n");
+
+		//begin added by stephen.wu for subsys reason record
+		#ifdef CONFIG_JRD_SSR_RECORD
+			sprintf(ssr_buf, "modem subsystem failure reason: (unknown, empty string found).");
+			subsystem_record_add_time(ssr_buf);
+		#endif
+		//end add by stephen.wu
+
 		return;
 	}
 
 	strlcpy(reason, smem_reason, min(size, MAX_SSR_REASON_LEN));
 	pr_err("modem subsystem failure reason: %s.\n", reason);
-
+	//begin added by stephen.wu for subsys reason record
+	#ifdef CONFIG_JRD_SSR_RECORD
+       sprintf(ssr_buf, "modem subsystem failure reason: %s." ,reason);
+       subsystem_record_add_time(ssr_buf);
+	#endif
+	//end added by stephen.wu
 	smem_reason[0] = '\0';
 	wmb();
 }
@@ -82,6 +109,12 @@ static irqreturn_t modem_err_fatal_intr_handler(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	pr_err("Fatal error on the modem.\n");
+	//begin added stephen.wu for subsys reason record
+	#ifdef CONFIG_JRD_SSR_RECORD
+		sprintf(ssr_buf, "%sFatal error on the modem.", ssr_buf);
+	    subsystem_record_add_time(ssr_buf);
+	#endif
+	//end added by stephen.wu
 	subsys_set_crash_status(drv->subsys, true);
 	restart_modem(drv);
 	return IRQ_HANDLED;

@@ -74,10 +74,30 @@ void msm_wdog_fiq_setup(void *stack);
 extern unsigned int msm_wdog_fiq_length, msm_wdog_fiq_start;
 extern unsigned int msm7k_fiq_start, msm7k_fiq_length;
 
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watchdog reset test PR-802266
+#ifdef CONFIG_MSM_WATCHDOG_V2
+void g_pet_watchdog(void);
+void msm_watchdog_reset(unsigned int timeout);
+//end add by jch for watchdog reset test PR-802266
+#endif
+#else
+
 #ifdef CONFIG_MSM_WATCHDOG
 void pet_watchdog(void);
+
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+void msm_watchdog_reset(unsigned int timeout);//add by jch for watchdog reset test PR-802266
+#endif
 #else
 static inline void pet_watchdog(void) { }
+
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watchdog reset test PR-802266
+static inline void msm_watchdog_reset(unsigned int timeout) { }
+//end add by jch for watchdog reset test PR-802266
+#endif
+#endif
 #endif
 
 #endif

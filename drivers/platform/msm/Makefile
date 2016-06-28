@@ -5,6 +5,10 @@
 ccflags-y += -Idrivers/misc/
 ccflags-y += -Isecurity/selinux -Isecurity/selinux/include
 
+ifeq ($(JRD_DISABLE_LONGPRESS), true)
+KBUILD_CFLAGS += -DFEATURE_TCTSH_FAKE_BATTERY_SUPPORT
+endif
+
 obj-$(CONFIG_MSM_BUS_SCALING) += msm_bus/
 obj-$(CONFIG_BUS_TOPOLOGY_ADHOC) += msm_bus/
 obj-$(CONFIG_MSM_MHI) += mhi/

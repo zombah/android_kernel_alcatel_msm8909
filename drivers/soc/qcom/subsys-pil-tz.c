@@ -153,6 +153,12 @@ static uint32_t scm_perf_client;
 static int scm_pas_bw_count;
 static DEFINE_MUTEX(scm_pas_bw_mutex);
 
+//begin added by stephen.wu for subsys reason record
+#ifdef CONFIG_JRD_SSR_RECORD
+extern void subsystem_record_add_time(char* );
+#endif
+//end added by stephen.wu
+
 static int scm_pas_enable_bw(void)
 {
 	int ret = 0;
@@ -755,16 +761,34 @@ static void log_failure_reason(const struct pil_tz_data *d)
 	if (!smem_reason || !size) {
 		pr_err("%s SFR: (unknown, smem_get_entry_no_rlock failed).\n",
 									name);
+		//begin added by stephen.wu for subsys reason record
+		#ifdef CONFIG_JRD_SSR_RECORD
+		sprintf(ssr_buf, "%s%s SFR: (unknown, smem_get_entry_no_rlock failed).", ssr_buf,
+		                                            name);
+		subsystem_record_add_time(ssr_buf);
+		#endif
+		//end added by stephen.wu
 		return;
 	}
 	if (!smem_reason[0]) {
 		pr_err("%s SFR: (unknown, empty string found).\n", name);
+		//begin added by stephen.wu for subsys reason record
+		#ifdef CONFIG_JRD_SSR_RECORD
+        sprintf(ssr_buf, "%s%s SFR: (unknown, empty string found).", ssr_buf, name);
+        subsystem_record_add_time(ssr_buf);
+		#endif
+		//end added by stephen.wu
 		return;
 	}
 
 	strlcpy(reason, smem_reason, min(size, MAX_SSR_REASON_LEN));
 	pr_err("%s subsystem failure reason: %s.\n", name, reason);
-
+	//begin added by stephen.wu for subsys reason record
+	#ifdef CONFIG_JRD_SSR_RECORD
+    sprintf(ssr_buf, "%s%s subsystem failure reason: %s.", ssr_buf, name, reason);
+    subsystem_record_add_time(ssr_buf);
+	#endif
+	//end added by stephen.wu
 	smem_reason[0] = '\0';
 	wmb();
 }
@@ -827,9 +851,22 @@ static irqreturn_t subsys_err_fatal_intr_handler (int irq, void *dev_id)
 	struct pil_tz_data *d = subsys_to_data(dev_id);
 
 	pr_err("Fatal error on %s!\n", d->subsys_desc.name);
+	//begin added by stephen.wu for subsys reason record
+	#ifdef CONFIG_JRD_SSR_RECORD
+	sprintf(ssr_buf, "Fatal error on %s!", d->subsys_desc.name);
+    subsystem_record_add_time(ssr_buf);
+	#endif
+	//end added by stephen.wu
 	if (subsys_get_crash_status(d->subsys)) {
 		pr_err("%s: Ignoring error fatal, restart in progress\n",
 							d->subsys_desc.name);
+		//begin added by stephen.wu for subsys reason record
+		#ifdef CONFIG_JRD_SSR_RECORD
+		sprintf(ssr_buf, "%s%s: Ignoring error fatal, restart in progress",
+		                               ssr_buf, d->subsys_desc.name);
+		subsystem_record_add_time(ssr_buf);
+		#endif
+		//end added by stephen.wu
 		return IRQ_HANDLED;
 	}
 	subsys_set_crash_status(d->subsys, true);

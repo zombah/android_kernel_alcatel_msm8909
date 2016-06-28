@@ -483,6 +483,15 @@ config MSM_CPU_PWR_CTL
 	  Provides routines to power on cpu rails and l2 cache
 	  controller during coldboot.
 
+#add by jch for watchdog reset test PR-802266
+	config TCT_WATCHDOG_TEST
+		bool "Watchdog reset test control"
+	depends on MSM_WATCHDOG_V2
+	default y
+	help
+		Provides watchdog reset test.
+#end add by jch for watchdog reset test PR-802266
+
 config MSM_XPU_ERR_FATAL
 	bool "Configure XPU violations as fatal errors"
 	help
@@ -570,6 +579,14 @@ config MSM_PERFORMANCE_HOTPLUG_ON
 	  capability of msm_performance driver. Setting this flag to false will
           compile out the nodes needed for core-control functionality through
           msm_performance.
+
+#add begin by stephen.wu for subsystem restart reason record
+config JRD_SSR_RECORD
+       bool "Subsystem restart reason record"
+       default n
+       help
+         Enable the subsystem restart and record the reason.
+#add end by stephen.wu
 
 source "drivers/soc/qcom/memshare/Kconfig"
 

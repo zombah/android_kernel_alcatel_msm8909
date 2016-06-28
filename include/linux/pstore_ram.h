@@ -67,7 +67,11 @@ void persistent_ram_free_old(struct persistent_ram_zone *prz);
 ssize_t persistent_ram_ecc_string(struct persistent_ram_zone *prz,
 	char *str, size_t len);
 
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+void  ramoops_contig_reserve_area( void );//add by jch for ramconsole PR-802169
+#else
 void ramoops_console_write_buf(const char *buf, size_t size);
+#endif
 
 /*
  * Ramoops platform data
@@ -85,4 +89,11 @@ struct ramoops_platform_data {
 	struct persistent_ram_ecc_info ecc_info;
 };
 
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+//add by jch for watch dog ramdump PR-802266
+#ifdef CONFIG_TCT_WATCHDOG_CTX_PRINT
+void __init  wdt_contig_reserve_area(void);
+#endif
+//end add by jch for watch dog ramdump PR-802266
+#endif
 #endif

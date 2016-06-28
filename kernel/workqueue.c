@@ -2875,19 +2875,18 @@ bool flush_work(struct work_struct *work)
 	}
 }
 EXPORT_SYMBOL_GPL(flush_work);
-
 struct cwt_wait {
-	wait_queue_t		wait;
-	struct work_struct	*work;
+ wait_queue_t wait;
+ struct work_struct *work;
 };
 
 static int cwt_wakefn(wait_queue_t *wait, unsigned mode, int sync, void *key)
 {
-	struct cwt_wait *cwait = container_of(wait, struct cwt_wait, wait);
+ struct cwt_wait *cwait = container_of(wait, struct cwt_wait, wait);
 
-	if (cwait->work != key)
-		return 0;
-	return autoremove_wake_function(wait, mode, sync, key);
+ if (cwait->work != key)
+ return 0;
+ return autoremove_wake_function(wait, mode, sync, key);
 }
 
 static bool __cancel_work_timer(struct work_struct *work, bool is_dwork)

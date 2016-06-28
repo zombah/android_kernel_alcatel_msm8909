@@ -17,6 +17,12 @@
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
 
+//begin added by stephen.wu for subsys reason record
+#ifdef CONFIG_JRD_SSR_RECORD
+#define SSR_RECORD_FILE "/tctpersist/crash_report/ssr_reason.txt"
+#endif
+//end added by stephpen.wu
+
 struct subsys_device;
 
 enum {
@@ -91,9 +97,23 @@ struct notif_data {
 	struct platform_device *pdev;
 };
 
+//begin added by stephen.wu for subsys reason record
+#ifdef CONFIG_JRD_SSR_RECORD
+extern char ssr_buf[1024];
+#endif
+//end added by stephpen.wu
+
 #if defined(CONFIG_MSM_SUBSYSTEM_RESTART)
 
 extern int subsys_get_restart_level(struct subsys_device *dev);
+
+//begin added by stephen.wu for subsys reason record
+#ifdef CONFIG_JRD_SSR_RECORD
+extern void subsystem_restart_record(const char* reason);
+extern void subsystem_record_add_time(char* buf);
+#endif
+//begin added by stephen.wu
+
 extern int subsystem_restart_dev(struct subsys_device *dev);
 extern int subsystem_restart(const char *name);
 extern int subsystem_crashed(const char *name);

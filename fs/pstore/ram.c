@@ -35,6 +35,10 @@
 #include <linux/compiler.h>
 #include <linux/pstore_ram.h>
 
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+#include <linux/memblock.h>//add by jch for ramconsole PR-802169
+#endif
+
 #define RAMOOPS_KERNMSG_HDR "===="
 #define MIN_MEM_SIZE 4096UL
 
@@ -43,7 +47,9 @@ module_param(record_size, ulong, 0400);
 MODULE_PARM_DESC(record_size,
 		"size of each dump done on oops/panic");
 
-static ulong ramoops_console_size = MIN_MEM_SIZE;
+//static ulong ramoops_console_size = MIN_MEM_SIZE;
+static ulong ramoops_console_size = 256*1024UL;
+
 module_param_named(console_size, ramoops_console_size, ulong, 0400);
 MODULE_PARM_DESC(console_size, "size of kernel console log");
 
@@ -51,12 +57,16 @@ static ulong ramoops_ftrace_size = MIN_MEM_SIZE;
 module_param_named(ftrace_size, ramoops_ftrace_size, ulong, 0400);
 MODULE_PARM_DESC(ftrace_size, "size of ftrace log");
 
-static ulong mem_address;
+//static ulong mem_address;
+//static ulong mem_address=0x9ff00000;
+static ulong mem_address=0x9fa00000;
 module_param(mem_address, ulong, 0400);
 MODULE_PARM_DESC(mem_address,
 		"start of reserved RAM used to store oops/panic logs");
 
-static ulong mem_size;
+//static ulong mem_size;
+//static ulong mem_size=0x100000;
+static ulong mem_size=0x0080000;
 module_param(mem_size, ulong, 0400);
 MODULE_PARM_DESC(mem_size,
 		"size of reserved RAM used to store oops/panic logs");
@@ -392,6 +402,9 @@ static int ramoops_probe(struct platform_device *pdev)
 	phys_addr_t paddr;
 	int err = -EINVAL;
 
+	#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+		printk("JCH:%s\n", __func__);//add by jch for ramconsloe PR-802169
+	#endif
 	/* Only a single ramoops area allowed at a time, so fail extra
 	 * probes.
 	 */
@@ -531,6 +544,27 @@ static struct platform_driver ramoops_driver = {
 		.owner	= THIS_MODULE,
 	},
 };
+
+#ifdef CONFIG_JRD_BUTTON_RAMCONSOLE_WDT
+ //add by jch for ramconsole PR-802169
+void __init  ramoops_contig_reserve_area(void)
+{
+   if (memblock_is_region_reserved(mem_address, mem_size)) {
+		printk("JCH:ramoops memblock_is_region_reserved error!\n");
+		mem_address = memblock_alloc(mem_size, PAGE_SIZE);
+		if (!mem_address) 
+			printk("JCH:ramoops memblock_alloc_base error!\n");
+		if (memblock_is_region_reserved(mem_address, mem_size)) 
+			printk("JCH:ramoops memblock_is_region_reserved error!\n");
+	}
+	else{
+		if ( memblock_reserve(mem_address, mem_size) < 0) {
+			printk("JCH:ramoops reserved memblock error!\n");
+        }
+	}
+}	
+//end add by jch for ramconsole PR-802169
+#endif
 
 static void ramoops_register_dummy(void)
 {

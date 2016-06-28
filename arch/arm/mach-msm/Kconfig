@@ -1050,4 +1050,42 @@ config FSM9900_GSM_NL
 	  The serial port connection can be established to communicate with the
 	  GSM NL module.
 
+# Begin add by wenzhao.guo on 12.09.2014
+
+config JRD_BUTTON_LOG_TIMESTAMP
+
+        bool "JRD_BUTTON_LOG_TIMESTAMP"
+
+
+
+config JRD_BUTTON_LOG_BOOT
+
+        bool "JRD_BUTTON_LOG_BOOT"
+
+
+
+config JRD_BUTTON_LOG_PANIC
+
+        bool "JRD_BUTTON_LOG_PANIC"
+
+
+
+config JRD_BUTTON_RAMCONSOLE_WDT
+
+        bool "JRD_BUTTON_RAMCONSOLE_WDT"
+
+
+
+config JRD_BUTTON_LOG_POWERUP
+
+        bool "JRD_BUTTON_LOG_POWERUP"
+
+
+
+config JRD_BUTTON_PRINTK
+
+        bool "JRD_BUTTON_PRINTK"
+
+# End add by wenzhao.guo on 12.09.2014
+
 endif
