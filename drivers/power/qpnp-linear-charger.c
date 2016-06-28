@@ -423,7 +423,6 @@ struct qpnp_lbc_chip {
 	bool				fastchg_on;
 	bool				cfg_use_external_charger;
 	bool				cfg_chgr_led_support;
-	bool                cfg_bms_controlled_charging;
 	unsigned int			cfg_warm_bat_chg_ma;
 	unsigned int			cfg_cool_bat_chg_ma;
 	unsigned int			cfg_safe_voltage_mv;
@@ -1390,33 +1389,6 @@ static int get_prop_capacity(struct qpnp_lbc_chip *chip)
 	if (chip->bms_psy) {
 		chip->bms_psy->get_property(chip->bms_psy,
 				POWER_SUPPLY_PROP_CAPACITY, &ret);
-		mutex_lock(&chip->chg_enable_lock);
-		if (chip->chg_done)
-			chip->bms_psy->get_property(chip->bms_psy,
-					POWER_SUPPLY_PROP_CAPACITY, &ret);
-		battery_status = get_prop_batt_status(chip);
-		charger_in = qpnp_lbc_is_usb_chg_plugged_in(chip);
-
-		/* reset chg_done flag if capacity not 100% */
-		if (ret.intval < 100 && chip->chg_done) {
-			chip->chg_done = false;
-			power_supply_changed(&chip->batt_psy);
-		}
-
-		if (battery_status != POWER_SUPPLY_STATUS_CHARGING
-				&& charger_in
-				&& !chip->cfg_charging_disabled
-				&& chip->cfg_soc_resume_limit
-				&& ret.intval <= chip->cfg_soc_resume_limit
-				&& !chip->cfg_bms_controlled_charging) {
-			pr_debug("resuming charging at %d%% soc\n",
-					ret.intval);
-			if (!chip->cfg_disable_vbatdet_based_recharge)
-				qpnp_lbc_vbatdet_override(chip, OVERRIDE_0);
-				qpnp_lbc_charger_enable(chip, SOC, 1);
-			}
-		mutex_unlock(&chip->chg_enable_lock);
-
 		soc = ret.intval;
 		if (soc == 0) {
 			if (!qpnp_lbc_is_usb_chg_plugged_in(chip))
@@ -1940,8 +1912,10 @@ static int qpnp_batt_power_set_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		mutex_lock(&chip->chg_enable_lock);
-		if (val->intval == POWER_SUPPLY_STATUS_FULL &&
-				!chip->cfg_float_charge) {
+		switch (val->intval) {
+		case POWER_SUPPLY_STATUS_FULL:
+			if (chip->cfg_float_charge)
+			        break;	
 			/* Disable charging */
 			rc = qpnp_lbc_charger_enable(chip, SOC, 0);
 			if (rc)
@@ -1966,25 +1940,22 @@ static int qpnp_batt_power_set_property(struct power_supply *psy,
 					qpnp_lbc_enable_irq(chip,
 						&chip->irqs[CHG_VBAT_DET_LO]);
 			}
-		}
-		if (chip->cfg_bms_controlled_charging) {
-			switch (val->intval) {
-			case POWER_SUPPLY_STATUS_CHARGING:
-				chip->chg_done = false;
-				pr_debug("resuming charging by bms\n");
-				if (!chip->cfg_disable_vbatdet_based_recharge)
-					qpnp_lbc_vbatdet_override(chip, OVERRIDE_0);
+			break;
+		case POWER_SUPPLY_STATUS_CHARGING:
+			chip->chg_done = false;
+			pr_debug("resuming charging by bms\n");
+			if (!chip->cfg_disable_vbatdet_based_recharge)
+				qpnp_lbc_vbatdet_override(chip, OVERRIDE_0);
 
-				qpnp_lbc_charger_enable(chip, SOC, 1);
-				break;
-			case POWER_SUPPLY_STATUS_DISCHARGING:
-				chip->chg_done = false;
-				pr_debug("status = DISCHARGING chg_done = %d\n",
-							chip->chg_done);
-				break;
-			default:
-				break;
-			}
+			qpnp_lbc_charger_enable(chip, SOC, 1);
+			break;
+		case POWER_SUPPLY_STATUS_DISCHARGING:
+			chip->chg_done = false;
+			pr_debug("status = DISCHARGING chg_done = %d\n",
+						chip->chg_done);
+			break;
+		default:
+			break;
 		}
 		mutex_unlock(&chip->chg_enable_lock);
 		break;
@@ -3244,10 +3215,6 @@ static int qpnp_charger_read_dt_props(struct qpnp_lbc_chip *chip)
 	chip->cfg_chgr_led_support =
 			of_property_read_bool(chip->spmi->dev.of_node,
 					"qcom,chgr-led-support");
-
-	chip->cfg_bms_controlled_charging =
-			of_property_read_bool(chip->spmi->dev.of_node,
-					"qcom,bms-controlled-charging");
 
 	/* Disable charging when faking battery values */
 	if (chip->cfg_use_fake_battery)
