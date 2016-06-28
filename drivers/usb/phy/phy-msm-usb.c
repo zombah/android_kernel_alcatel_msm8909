@@ -52,6 +52,8 @@
 
 #include <linux/msm-bus.h>
 
+#include "tct-usb-spmi.h"
+
 #define MSM_USB_BASE	(motg->regs)
 #define MSM_USB_PHY_CSR_BASE (motg->phy_csr_regs)
 
@@ -95,7 +97,7 @@ module_param(lpm_disconnect_thresh , uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(lpm_disconnect_thresh,
 	"Delay before entering LPM on USB disconnect");
 
-static bool floated_charger_enable;
+static bool floated_charger_enable = 1;
 module_param(floated_charger_enable , bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(floated_charger_enable,
 	"Whether to enable floated charger");
@@ -135,6 +137,30 @@ static char bus_clkname[USB_NUM_BUS_CLOCKS][20] = {"bimc_clk", "snoc_clk",
 						"pcnoc_clk"};
 static bool bus_clk_rate_set;
 
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI445_TF)
+unsigned long chg_force_mode = 0;
+static int __init chg_force_setup(char *str)
+{
+       unsigned long force;
+       if (!strict_strtoul(str, 0, &force))
+               chg_force_mode = force ? 1 : 0;
+       return 1;
+}
+__setup("chg_force=", chg_force_setup);
+
+bool get_power_off_mode = false;
+static int __init get_charging_state(char *s)
+{
+	//printk("power_on_mode:%s\n",s);
+	if(!strncmp(s, "charger",strlen("charger")))
+	{
+		get_power_off_mode = true;
+		//printk("power off charging!\n");
+	}
+	return 0;
+}
+__setup("androidboot.mode=", get_charging_state);
+#endif
 static void
 msm_otg_dbg_log_event(struct usb_phy *phy, char *event, int d1, int d2)
 {
@@ -1847,9 +1873,31 @@ static void msm_otg_notify_host_mode(struct msm_otg *motg, bool host_mode)
 	}
 }
 
+//mike.li add for TP charger mode [2015.04.21][PR983493]
+#if defined(CONFIG_TCT_8909_PIXI35)
+//extern void DrvIcFwLyrChargerInput(void);
+//extern void DrvIcFwLyrChargerOutput(void);
+extern void ft5x06_disable_change_scanning_frq(void);
+extern void ft5x06_enable_change_scanning_frq(void); 
+bool charger_in = false;
+//extern bool is_msg2638;
+//extern bool is_ft5x06;
+#endif
+
+#if defined(CONFIG_TCT_8909_PIXI355)
+//mike.li add for TP charger mode [2015.08.216]
+extern void synaptics_enable_change_scanning_frq(void);
+extern void synaptics_disable_change_scanning_frq(void); 
+bool charger_in = false;
+#endif
+
 static int msm_otg_notify_chg_type(struct msm_otg *motg)
 {
 	static int charger_type;
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355)
+	int charger_type_last; //mike.li add
+	charger_type_last = charger_type;
+#endif
 
 	/*
 	 * TODO
@@ -1873,7 +1921,36 @@ static int msm_otg_notify_chg_type(struct msm_otg *motg)
 		charger_type = POWER_SUPPLY_TYPE_USB_ACA;
 	else
 		charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355)
+	//mike.li add start for TP [2015.04.21][PR983493]
+	if ((charger_type_last == POWER_SUPPLY_TYPE_UNKNOWN) && ((charger_type == POWER_SUPPLY_TYPE_USB_DCP) || (charger_type == POWER_SUPPLY_TYPE_USB))) { // charger plug in
+		pr_debug("[MIKE]%s AC or USB charger in \n", __func__);
+		charger_in = true;
+		#if defined(CONFIG_TCT_8909_PIXI35)
+		//if (is_msg2638 == true)
+		//	DrvIcFwLyrChargerInput();
+		//else if (is_ft5x06 == true)
+			ft5x06_enable_change_scanning_frq();
+		#elif defined(CONFIG_TCT_8909_PIXI355)
+			synaptics_enable_change_scanning_frq();
+		#endif
+	}
 
+	if (((charger_type_last == POWER_SUPPLY_TYPE_USB_DCP) || (charger_type_last == POWER_SUPPLY_TYPE_USB))&& (charger_type == POWER_SUPPLY_TYPE_UNKNOWN)) {// charger plug out
+		pr_debug("[MIKE]%s AC or USB charger out\n", __func__);
+		charger_in = false;
+
+		#if defined(CONFIG_TCT_8909_PIXI35)
+		//if (is_msg2638 == true)
+		//	DrvIcFwLyrChargerOutput();
+		//else if (is_ft5x06 == true)
+			ft5x06_disable_change_scanning_frq();
+		#elif defined(CONFIG_TCT_8909_PIXI355)
+			synaptics_disable_change_scanning_frq();
+		#endif 
+	}
+	//mike.li add end for TP 2015.04.21
+#endif	
 	if (!psy) {
 		pr_err("No USB power supply registered!\n");
 		return -EINVAL;
@@ -2899,8 +2976,12 @@ static const char *chg_to_string(enum usb_chg_type chg_type)
 	default:			return "INVALID_CHARGER";
 	}
 }
-
+/*20150914,ozy,pr1070417*/
+#ifdef CONFIG_TCT_8909_PIXI355
+#define MSM_CHG_DCD_TIMEOUT		(1950 * HZ/1000) /* 1950 msec */
+#else
 #define MSM_CHG_DCD_TIMEOUT		(750 * HZ/1000) /* 750 msec */
+#endif
 #define MSM_CHG_DCD_POLL_TIME		(50 * HZ/1000) /* 50 msec */
 #define MSM_CHG_PRIMARY_DET_TIME	(50 * HZ/1000) /* TVDPSRC_ON */
 #define MSM_CHG_SECONDARY_DET_TIME	(50 * HZ/1000) /* TVDMSRC_ON */
@@ -2912,7 +2993,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 	static bool dcd;
 	u32 line_state, dm_vlgc;
 	unsigned long delay;
-
+        u32 func_ctrl; //JRD BSP eric.gong "QC patch:Disable QC2.0 sw entry" 
 	dev_dbg(phy->dev, "chg detection work\n");
 	msm_otg_dbg_log_event(phy, "CHG DETECTION WORK",
 			motg->chg_state, phy->state);
@@ -3041,9 +3122,14 @@ static void msm_chg_detect_work(struct work_struct *w)
 			udelay(100);
 		msm_chg_enable_aca_intr(motg);
 
-		/* Enable VDP_SRC in case of DCP charger */
-		if (motg->chg_type == USB_DCP_CHARGER)
-			ulpi_write(phy, 0x2, 0x85);
+                /*JRD BSP START eric.gong "QC patch:Disable QC2.0 sw entry"*/
+                /* put the controller in non-driving mode */
+                if (motg->chg_type == USB_DCP_CHARGER){
+                    func_ctrl = ulpi_read(phy, ULPI_FUNC_CTRL);
+                    func_ctrl &= ~ULPI_FUNC_CTRL_OPMODE_MASK;
+                    func_ctrl |= ULPI_FUNC_CTRL_OPMODE_NONDRIVING;
+                    ulpi_write(phy, func_ctrl, ULPI_FUNC_CTRL);
+                    }     
 
 		dev_dbg(phy->dev, "chg_type = %s\n",
 			chg_to_string(motg->chg_type));
@@ -3290,7 +3376,13 @@ static void msm_otg_sm_work(struct work_struct *w)
 					break;
 				case USB_FLOATED_CHARGER:
 					msm_otg_notify_charger(motg,
+/* [PLATFORM]-Mod-BEGIN by TCTNB.YuBin, 2015/08/12, set floated charger 500ma */
+#ifdef CONFIG_TCT_8909_PIXI37
+							500);
+#else
 							IDEV_CHG_MAX);
+#endif
+/* [PLATFORM]-Mod-END by TCTNB.YuBin */
 					msm_otg_dbg_log_event(&motg->phy,
 					"PM RUNTIME: FLCHG PUT",
 					get_pm_runtime_counter(otg->phy->dev),
@@ -3321,6 +3413,15 @@ static void msm_otg_sm_work(struct work_struct *w)
 						OTG_STATE_B_PERIPHERAL;
 					break;
 				case USB_SDP_CHARGER:
+				#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI445_TF)
+				// SMB1360 set usb online only when usb current wasn't 0;
+				// Set USB current first to avoid sub online was 0.
+				// If usb online was 0, phone will shutdown at power off charging.
+				// It'll cause infinite restart when computer was in sleep mode
+				// BUG 1061306
+					if(get_power_off_mode)
+						msm_otg_notify_charger(motg, 500);
+				#endif
 					msm_otg_start_peripheral(otg, 1);
 					otg->phy->state =
 						OTG_STATE_B_PERIPHERAL;
@@ -5204,8 +5305,21 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 	}
 	of_property_read_u32(node, "qcom,hsusb-otg-power-budget",
 				&pdata->power_budget);
+#if defined(CONFIG_TCT_SMB1360_AND_PM8909_CHARGER)
+	//If charger was EXT_CHARGER, return false, set as 3.
+	//If charger was PMIC_CHARGER, return true, set as 1.
+	//As msm8909-mtp-smb1360.dts setting.
+	pdata->mode = (tct_usb_get_spmi_chg_option() ? 1 : 3);
+#else	
 	of_property_read_u32(node, "qcom,hsusb-otg-mode",
 				&pdata->mode);
+#endif	
+#if defined(CONFIG_TCT_8909_PIXI35) || defined(CONFIG_TCT_8909_PIXI355) || defined(CONFIG_TCT_8909_PIXI445_TF)
+       if(chg_force_mode) {
+               pdata->mode = USB_PERIPHERAL;
+               pr_warn("[Liu]%s: chg_force mode, set peripheral only mode\n", __func__);
+       }
+#endif
 	of_property_read_u32(node, "qcom,hsusb-otg-otg-control",
 				&pdata->otg_control);
 	of_property_read_u32(node, "qcom,hsusb-otg-default-mode",

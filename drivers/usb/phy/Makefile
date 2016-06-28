@@ -4,6 +4,8 @@
 
 ccflags-$(CONFIG_USB_DEBUG) := -DDEBUG
 
+obj-$(CONFIG_TCT_SMB1360_AND_PM8909_CHARGER)	+= tct-usb-spmi.o
+
 obj-$(CONFIG_USB_PHY)			+= phy.o
 obj-$(CONFIG_OF)			+= of.o
 obj-$(CONFIG_USB_OTG_WAKELOCK)		+= otg-wakelock.o
@@ -37,3 +39,4 @@ obj-$(CONFIG_USB_MXS_PHY)		+= phy-mxs-usb.o
 obj-$(CONFIG_USB_RCAR_PHY)		+= phy-rcar-usb.o
 obj-$(CONFIG_USB_ULPI)			+= phy-ulpi.o
 obj-$(CONFIG_USB_ULPI_VIEWPORT)		+= phy-ulpi-viewport.o
+

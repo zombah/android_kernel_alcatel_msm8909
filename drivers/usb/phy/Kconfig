@@ -304,4 +304,10 @@ config USB_ULPI_VIEWPORT
 	  Provides read/write operations to the ULPI phy register set for
 	  controllers with a viewport register (e.g. Chipidea/ARC controllers).
 
+config TCT_SMB1360_AND_PM8909_CHARGER
+	bool "TCT SMB1360 AND PM8909 COMPATIBLE"
+	default n
+	help
+		Enable this support compatible smb1360 charger with pm8909 linear charger.
+
 endif # USB_PHY
