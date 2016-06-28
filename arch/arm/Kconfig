@@ -2208,6 +2208,71 @@ config ARM_DECOMPRESSOR_LIMIT
 	  with read, write and execute permissions and reset of the memory
 	  as strongly ordered.
 
+config TCT_8909_COMMON  
+	depends on ARCH_MSM8909
+        bool "MSM8909 TCT COMMON"
+        help
+          Support for the TCT COMMON device.
+
+config TCT_8909_POP3
+	depends on ARCH_MSM8909
+	bool "MSM8909 POP3"
+	help
+	  Support for the TCT POP3 device
+
+config TCT_8909_PIXI35
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI35"
+	help
+	  Support for the TCT PIXI35 device
+
+config TCT_8909_PIXI37
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI37"
+	help
+	  Support for the TCT PIXI37 device
+
+config TCT_8909_PIXI355
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI355"
+	help
+	  Support for the TCT PIXI355 device
+
+config TCT_8909_PIXI355_TMO
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI355_TMO"
+	help
+	  Support for the TCT PIXI355_TMO device
+
+config TCT_8909_PIXI355_TF
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI355_TF"
+	help
+	  Support for the TCT PIXI355_TF device
+
+config TCT_8909_PIXI355_CRICKET
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI355_CRICKET"
+	help
+	  Support for the TCT PIXI355_CRICKET device
+
+config TCT_8909_PIXI455_GEOPHONE
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI455_GEOPHONE"
+	help
+	  Support for the TCT PIXI455_GEOPHONE device
+
+config TCT_8909_PIXI384G
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI384G"
+	help
+	  Support for the TCT PIXI384G device
+
+config TCT_8909_PIXI445_TF
+	depends on ARCH_MSM8909
+	bool "MSM8909 PIXI445_TF"
+	help
+	  Support for the TCT PIXI445_TF device
 endmenu
 
 menu "CPU Power Management"

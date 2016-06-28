@@ -280,8 +280,39 @@ ifeq ($(CONFIG_USE_OF),y)
 KBUILD_DTBS := dtbs
 endif
 
-DTSSUBDIR := qcom
-
+ifndef CONFIG_TCT_8909_COMMON
+    DTSSUBDIR := qcom
+endif
+ifdef CONFIG_TCT_8909_PIXI35
+    DTSSUBDIR := pixi35
+endif
+ifdef CONFIG_TCT_8909_POP3
+    DTSSUBDIR := pop3
+endif
+ifdef CONFIG_TCT_8909_PIXI37
+    DTSSUBDIR := pixi37
+endif
+ifdef CONFIG_TCT_8909_PIXI355
+    DTSSUBDIR := pixi355
+endif
+ifdef CONFIG_TCT_8909_PIXI355_TMO
+    DTSSUBDIR := pixi355_tmo
+endif
+ifdef CONFIG_TCT_8909_PIXI355_TF
+    DTSSUBDIR := pixi355_tf
+endif
+ifdef CONFIG_TCT_8909_PIXI355_CRICKET
+    DTSSUBDIR := pixi355_cricket
+endif
+ifdef CONFIG_TCT_8909_PIXI455_GEOPHONE
+    DTSSUBDIR := pixi455_geophone
+endif
+ifdef CONFIG_TCT_8909_PIXI384G
+    DTSSUBDIR := pixi384g
+endif
+ifdef CONFIG_TCT_8909_PIXI445_TF
+    DTSSUBDIR := pixi445_tf
+endif
 all:	$(KBUILD_IMAGE) $(KBUILD_DTBS)
 
 boot := arch/arm/boot

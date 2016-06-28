@@ -219,7 +219,14 @@ targets += dtbs
 targets += $(DTB_LIST)
 
 #used for cleaning - not building
+ifndef CONFIG_TCT_8909_COMMON
 subdir- := qcom
+endif
+
+ifdef CONFIG_TCT_8909_PIXI35
+subdir- := pixi35
+endif
+
 endif
 
 # *.dtb used to be generated in the directory above. Clean out the
